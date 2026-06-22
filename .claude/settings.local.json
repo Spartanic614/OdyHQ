@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "PowerShell(git init)",
-      "PowerShell(git add .)"
+      "PowerShell(git add .)",
+      "Bash(claude mcp *)",
+      "WebSearch",
+      "mcp__329c417e-84e6-4a37-ac00-08d8ee60bb95__list_projects",
+      "mcp__329c417e-84e6-4a37-ac00-08d8ee60bb95__list_tables",
+      "mcp__329c417e-84e6-4a37-ac00-08d8ee60bb95__generate_typescript_types"
     ]
   }
 }
