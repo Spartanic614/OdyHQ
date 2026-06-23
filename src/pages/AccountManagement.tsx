@@ -8,6 +8,7 @@ import { Pill } from '../components/StatusBadge'
 import { SelectFilter, uniqueValues } from '../components/Filters'
 import { TableSkeleton, ErrorBanner, EmptyState } from '../components/States'
 import { exportCsv } from '../lib/csv'
+import { channelGroup } from '../config/methodology'
 import { fmtInt } from '../lib/format'
 import { tierColors, theme } from '../theme'
 import type { ChainPriority, HitListRow } from '../data/selectors'
@@ -241,14 +242,14 @@ function HitList({ onPick }: { onPick: (id: string) => void }) {
   )
 }
 
-// ---------------- Most Wanted (retailers ranked by outlet count) ----------------
+// ---------------- Most Wanted (retailers ranked by outlet count, split by channel) ----------------
 function MostWanted({ onPick }: { onPick: (id: string) => void }) {
   const { chains, loading } = useData()
   const [am, setAm] = useState('')
   const [search, setSearch] = useState('')
 
-  // Outlet count = dim_chain.total_universe (the chain's store universe).
-  const ranked = useMemo(
+  // Outlet count = dim_chain.total_universe; channel split via channelGroup().
+  const base = useMemo(
     () =>
       chains.rows
         .filter((c) => (c.total_universe ?? 0) > 0)
@@ -264,14 +265,21 @@ function MostWanted({ onPick }: { onPick: (id: string) => void }) {
     [chains.rows, am, search],
   )
 
-  const max = ranked[0]?.total_universe ?? 1
+  const largeFormat = useMemo(
+    () => base.filter((c) => channelGroup(c.channel) === 'Large Format'),
+    [base],
+  )
+  const natural = useMemo(
+    () => base.filter((c) => channelGroup(c.channel) === 'Natural'),
+    [base],
+  )
 
   if (loading) return <TableSkeleton />
   if (chains.error) return <ErrorBanner table="dim_chain" message={chains.error} />
 
   return (
-    <div className="card overflow-hidden">
-      <div className="flex flex-wrap items-center gap-2 p-2 border-b border-white/10">
+    <div className="space-y-3">
+      <div className="card p-2 flex flex-wrap items-center gap-2">
         <div className="text-sm font-semibold px-1">
           Most Wanted
           <span className="text-muted font-normal"> · top retailers by outlet count</span>
@@ -289,33 +297,59 @@ function MostWanted({ onPick }: { onPick: (id: string) => void }) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <button
-          className="btn"
-          disabled={!ranked.length}
-          onClick={() =>
-            exportCsv(
-              'most_wanted',
-              ranked.map((c, i) => ({
-                Rank: i + 1,
-                Retailer: c.chain_name ?? c.chain_id,
-                'Outlet Count': c.total_universe,
-                'Account Manager': c.account_manager,
-                Channel: c.channel,
-                Region: c.region,
-              })),
-            )
-          }
-        >
-          ⤓ CSV
-        </button>
-        <span className="text-xs text-muted px-1">{ranked.length} retailers</span>
       </div>
 
-      {ranked.length === 0 ? (
-        <EmptyState message="No retailers with an outlet count match the current filters." />
+      <div className="grid gap-3 lg:grid-cols-2">
+        <MostWantedBox title="Large Format" rows={largeFormat} onPick={onPick} />
+        <MostWantedBox title="Natural" rows={natural} onPick={onPick} />
+      </div>
+    </div>
+  )
+}
+
+function MostWantedBox({
+  title,
+  rows,
+  onPick,
+}: {
+  title: string
+  rows: ReturnType<typeof useData>['chains']['rows']
+  onPick: (id: string) => void
+}) {
+  const max = rows[0]?.total_universe ?? 1
+  return (
+    <div className="card overflow-hidden">
+      <div className="flex items-center justify-between gap-2 p-2 border-b border-white/10">
+        <div className="text-sm font-semibold px-1">{title}</div>
+        <div className="flex items-center gap-2">
+          <button
+            className="btn text-xs"
+            disabled={!rows.length}
+            onClick={() =>
+              exportCsv(
+                `most_wanted_${title.toLowerCase().replace(/\s+/g, '_')}`,
+                rows.map((c, i) => ({
+                  Rank: i + 1,
+                  Retailer: c.chain_name ?? c.chain_id,
+                  'Outlet Count': c.total_universe,
+                  'Account Manager': c.account_manager,
+                  Channel: c.channel,
+                  Region: c.region,
+                })),
+              )
+            }
+          >
+            ⤓ CSV
+          </button>
+          <span className="text-xs text-muted px-1">{rows.length}</span>
+        </div>
+      </div>
+
+      {rows.length === 0 ? (
+        <EmptyState message={`No ${title} retailers match the current filters.`} />
       ) : (
-        <div className="overflow-auto max-h-[70vh] divide-y divide-white/5">
-          {ranked.map((c, i) => {
+        <div className="overflow-auto max-h-[68vh] divide-y divide-white/5">
+          {rows.map((c, i) => {
             const outlets = c.total_universe ?? 0
             const pct = max > 0 ? (outlets / max) * 100 : 0
             return (

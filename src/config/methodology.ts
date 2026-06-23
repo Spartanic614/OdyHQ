@@ -61,6 +61,31 @@ export const WOS_WATCH_BUFFER = 1
 // between 0 and this reads "Breakeven"; below 0 reads "In the Red".
 export const TRADE_PROFIT_MARGIN = 0.05
 
+// ---- Channel groups for the Most Wanted boxes ----
+// Maps raw dim_chain.channel values to a group. Edit these alias lists to
+// match the channel flags in the real dataset (matched case-insensitively:
+// exact first, then substring fallback).
+export const CHANNEL_GROUPS: Record<string, string[]> = {
+  'Large Format': ['large format', 'conventional', 'grocery', 'mass', 'club', 'drug', 'big box'],
+  Natural: ['natural', 'natural & specialty', 'specialty', 'co-op', 'coop', 'infra', 'ncg'],
+}
+
+export function channelGroup(channel: string | null | undefined): string | null {
+  if (!channel) return null
+  const c = channel.trim().toLowerCase()
+  const entries = Object.entries(CHANNEL_GROUPS)
+  // Exact match wins.
+  for (const [group, aliases] of entries) {
+    if (aliases.some((a) => c === a)) return group
+  }
+  // Substring fallback checks Natural first so compound values like
+  // "Natural Grocery" don't get pulled into Large Format via "grocery".
+  for (const [group, aliases] of [...entries].reverse()) {
+    if (aliases.some((a) => c.includes(a))) return group
+  }
+  return null
+}
+
 export type Tier = 'A' | 'B' | 'C'
 
 export function tierForScore(score: number): Tier {
