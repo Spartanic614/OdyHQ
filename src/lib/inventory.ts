@@ -135,6 +135,13 @@ export function parsePaste(text: string): ParseResult {
   return { headers, rows, detected }
 }
 
+// Risk is lead-time aware:
+//   At Risk  — WOS ≤ lead time: stocks out before a PO placed today can arrive
+//   Reorder  — lead time < WOS ≤ target: below target, order now to stay ahead
+//   OK       — WOS > target
+//   No Sales — AWS missing/zero, can't compute
+export type RiskLevel = 'At Risk' | 'Reorder' | 'OK' | 'No Sales'
+
 export interface InventoryItem {
   distributor: string
   sku: string
@@ -143,13 +150,15 @@ export interface InventoryItem {
   avgWeeklySales: number | null
   onPo: number | null
   wos: number | null // null when AWS missing/zero
-  flagged: boolean
+  risk: RiskLevel
+  flagged: boolean // risk is At Risk or Reorder
   suggestedOrder: number
 }
 
 export interface CalcOptions {
   targetWos: number
   includeOnPo: boolean
+  leadTimeWeeks: number
 }
 
 export function buildItems(
@@ -180,10 +189,20 @@ export function buildItems(
       wos = supply / avgWeeklySales
     }
 
-    const flagged = wos != null && wos < opts.targetWos
+    // Lead-time-aware risk classification.
+    let risk: RiskLevel
+    if (wos == null) risk = 'No Sales'
+    else if (wos <= opts.leadTimeWeeks) risk = 'At Risk'
+    else if (wos <= opts.targetWos) risk = 'Reorder'
+    else risk = 'OK'
+
+    const flagged = risk === 'At Risk' || risk === 'Reorder'
+
+    // Order enough to cover demand during the lead time AND land back at
+    // target WOS when it arrives: (target + leadTime) × AWS − what we have.
     let suggestedOrder = 0
     if (flagged && avgWeeklySales != null) {
-      const targetUnits = opts.targetWos * avgWeeklySales
+      const targetUnits = (opts.targetWos + opts.leadTimeWeeks) * avgWeeklySales
       const have = (onHand ?? 0) + (opts.includeOnPo ? (onPo ?? 0) : 0)
       suggestedOrder = Math.max(0, Math.ceil(targetUnits - have))
     }
@@ -196,6 +215,7 @@ export function buildItems(
       avgWeeklySales,
       onPo,
       wos,
+      risk,
       flagged,
       suggestedOrder,
     })
@@ -206,43 +226,71 @@ export function buildItems(
 const fmtWos = (w: number | null) => (w == null ? '—' : w.toFixed(1))
 const fmtN = (n: number | null) => (n == null ? '—' : Math.round(n).toLocaleString('en-US'))
 
-// Build the copyable buyer message (bulleted reorder list, grouped by distributor).
+const bulletFor = (i: InventoryItem) => {
+  const name = [i.sku, i.description].filter(Boolean).join(' — ')
+  const po = i.onPo != null && i.onPo > 0 ? `, ${fmtN(i.onPo)} on PO` : ''
+  return `• ${name}: ${fmtWos(i.wos)} WOS (on hand ${fmtN(i.onHand)}, ~${fmtN(
+    i.avgWeeklySales,
+  )}/wk${po}). Suggest ordering ${fmtN(i.suggestedOrder)}.`
+}
+
+// Group a set of items by distributor into "Dist:\n• …" sections, most urgent first.
+const sectionsByDist = (items: InventoryItem[]) => {
+  const byDist = new Map<string, InventoryItem[]>()
+  for (const it of items) {
+    const list = byDist.get(it.distributor) ?? []
+    list.push(it)
+    byDist.set(it.distributor, list)
+  }
+  const out: string[] = []
+  for (const [dist, list] of byDist) {
+    list.sort((a, b) => (a.wos ?? 0) - (b.wos ?? 0))
+    out.push(`${dist}:\n${list.map(bulletFor).join('\n')}`)
+  }
+  return out
+}
+
+// Build the copyable buyer message — lead-time aware, at-risk items first.
 export function buildMessage(
   items: InventoryItem[],
   opts: CalcOptions,
   greeting = 'Hi,',
 ): string {
-  const flagged = items.filter((i) => i.flagged && i.suggestedOrder > 0)
-  if (flagged.length === 0) {
-    return `${greeting}\n\nInventory looks healthy — no SKUs are below ${opts.targetWos} weeks of supply at this time. Thank you!`
+  const actionable = items.filter((i) => i.flagged && i.suggestedOrder > 0)
+  if (actionable.length === 0) {
+    return `${greeting}\n\nInventory looks healthy — every SKU has more than ${opts.targetWos} weeks of supply, comfortably above our ${opts.leadTimeWeeks}-week replenishment lead time. Thank you!`
   }
 
-  const byDist = new Map<string, InventoryItem[]>()
-  for (const it of flagged) {
-    const list = byDist.get(it.distributor) ?? []
-    list.push(it)
-    byDist.set(it.distributor, list)
+  const atRisk = actionable.filter((i) => i.risk === 'At Risk')
+  const reorder = actionable.filter((i) => i.risk === 'Reorder')
+
+  const blocks: string[] = []
+  if (atRisk.length) {
+    blocks.push(
+      `AT RISK — projected to stock out before a new PO can arrive (${opts.leadTimeWeeks}-week lead time):\n\n` +
+        sectionsByDist(atRisk).join('\n\n'),
+    )
+  }
+  if (reorder.length) {
+    blocks.push(
+      `REORDER — below our ${opts.targetWos}-week target; ordering now keeps us ahead:\n\n` +
+        sectionsByDist(reorder).join('\n\n'),
+    )
   }
 
-  const sections: string[] = []
-  for (const [dist, list] of byDist) {
-    list.sort((a, b) => (a.wos ?? 0) - (b.wos ?? 0))
-    const bullets = list
-      .map((i) => {
-        const name = [i.sku, i.description].filter(Boolean).join(' — ')
-        const po = i.onPo != null && i.onPo > 0 ? `, ${fmtN(i.onPo)} on PO` : ''
-        return `• ${name}: ${fmtWos(i.wos)} WOS (on hand ${fmtN(i.onHand)}, ~${fmtN(
-          i.avgWeeklySales,
-        )}/wk${po}). Suggest ordering ${fmtN(i.suggestedOrder)}.`
-      })
-      .join('\n')
-    sections.push(`${dist}:\n${bullets}`)
+  const atRiskPhrase = `${atRisk.length} SKU${atRisk.length > 1 ? 's' : ''} at risk of stocking out before replenishment arrives (our PO-to-warehouse lead time is ${opts.leadTimeWeeks} weeks)`
+  let lead: string
+  if (atRisk.length && reorder.length) {
+    lead = `We have ${atRiskPhrase}, plus ${reorder.length} more below our ${opts.targetWos}-week target:`
+  } else if (atRisk.length) {
+    lead = `We have ${atRiskPhrase}:`
+  } else {
+    lead = `A few items are below our ${opts.targetWos}-week target and could use a replenishment PO:`
   }
 
   return (
-    `${greeting}\n\n` +
-    `A few items are running below ${opts.targetWos} weeks of supply and could use a replenishment PO:\n\n` +
-    sections.join('\n\n') +
-    `\n\nLet me know if you'd like me to adjust quantities. Thank you!`
+    `${greeting}\n\n${lead}\n\n` +
+    blocks.join('\n\n') +
+    `\n\nSuggested quantities cover the ${opts.leadTimeWeeks}-week lead time plus our target. Happy to adjust. Thank you!`
   )
 }

@@ -7,11 +7,12 @@ import {
   type ColumnMap,
   type FieldKey,
   type InventoryItem,
+  type RiskLevel,
 } from '../lib/inventory'
 import {
   INVENTORY_INCLUDE_ON_PO,
+  INVENTORY_LEAD_TIME_WEEKS,
   INVENTORY_TARGET_WOS,
-  WOS_WATCH_BUFFER,
 } from '../config/methodology'
 import { EmptyState } from '../components/States'
 import { exportCsv } from '../lib/csv'
@@ -29,6 +30,7 @@ export function Inventory() {
   const [distributor, setDistributor] = useState('KeHE')
   const [text, setText] = useState('')
   const [targetWos, setTargetWos] = useState(INVENTORY_TARGET_WOS)
+  const [leadTimeWeeks, setLeadTimeWeeks] = useState(INVENTORY_LEAD_TIME_WEEKS)
   const [includeOnPo, setIncludeOnPo] = useState(INVENTORY_INCLUDE_ON_PO)
   const [greeting, setGreeting] = useState('Hi,')
   const [overrideMap, setOverrideMap] = useState<ColumnMap>({})
@@ -44,15 +46,22 @@ export function Inventory() {
   )
 
   const items = useMemo(
-    () => buildItems(parsed.rows, map, distributor, { targetWos, includeOnPo }),
-    [parsed.rows, map, distributor, targetWos, includeOnPo],
+    () =>
+      buildItems(parsed.rows, map, distributor, {
+        targetWos,
+        includeOnPo,
+        leadTimeWeeks,
+      }),
+    [parsed.rows, map, distributor, targetWos, includeOnPo, leadTimeWeeks],
   )
 
-  const flaggedCount = items.filter((i) => i.flagged).length
+  const atRiskCount = items.filter((i) => i.risk === 'At Risk').length
+  const reorderCount = items.filter((i) => i.risk === 'Reorder').length
 
   const generatedMessage = useMemo(
-    () => buildMessage(items, { targetWos, includeOnPo }, greeting),
-    [items, targetWos, includeOnPo, greeting],
+    () =>
+      buildMessage(items, { targetWos, includeOnPo, leadTimeWeeks }, greeting),
+    [items, targetWos, includeOnPo, leadTimeWeeks, greeting],
   )
   const message = editedMessage ?? generatedMessage
 
@@ -84,8 +93,9 @@ export function Inventory() {
         <div>
           <h1 className="text-xl font-semibold">Inventory → Buyer Message</h1>
           <p className="text-sm text-muted">
-            Paste a KeHE or UNFI inventory export, and get a copyable reorder
-            message based on Weeks of Supply.
+            Paste a KeHE or UNFI inventory export to flag what's at risk —
+            stockouts before replenishment lands, given your PO lead time —
+            and get a copyable reorder message.
           </p>
         </div>
       </div>
@@ -102,6 +112,19 @@ export function Inventory() {
             <option>KeHE</option>
             <option>UNFI</option>
           </select>
+        </label>
+        <label className="text-xs text-muted flex flex-col gap-1">
+          Lead time (wks)
+          <input
+            type="number"
+            min={0}
+            step={1}
+            className="input w-24"
+            value={leadTimeWeeks}
+            onChange={(e) =>
+              setLeadTimeWeeks(Math.max(0, Number(e.target.value) || 0))
+            }
+          />
         </label>
         <label className="text-xs text-muted flex flex-col gap-1">
           Target WOS
@@ -124,8 +147,14 @@ export function Inventory() {
         </label>
         <div className="flex-1" />
         {hasData && (
-          <div className="text-xs text-muted pb-2">
-            {parsed.rows.length} rows · {flaggedCount} below {targetWos} WOS
+          <div className="text-xs pb-2 flex items-center gap-2">
+            <span className="text-muted">{parsed.rows.length} rows ·</span>
+            <span style={{ color: theme.bad }}>{atRiskCount} at risk</span>
+            <span className="text-muted">·</span>
+            <span style={{ color: theme.warn }}>{reorderCount} reorder</span>
+            <span className="text-muted">
+              (≤{leadTimeWeeks}w lead / ≤{targetWos}w target)
+            </span>
           </div>
         )}
       </div>
@@ -221,6 +250,7 @@ export function Inventory() {
                     'Avg Weekly Sales': i.avgWeeklySales,
                     'On PO': i.onPo,
                     WOS: i.wos == null ? '' : i.wos.toFixed(1),
+                    Risk: i.risk,
                     'Suggested Order': i.suggestedOrder,
                   })),
                 )
@@ -239,13 +269,20 @@ export function Inventory() {
                   <th className="th text-right">AWS</th>
                   <th className="th text-right">On PO</th>
                   <th className="th text-right">WOS</th>
+                  <th className="th">Risk</th>
                   <th className="th text-right">Suggested Order</th>
                 </tr>
               </thead>
               <tbody>
-                {items.map((i, idx) => (
-                  <ItemRow key={`${i.sku}-${idx}`} item={i} targetWos={targetWos} />
-                ))}
+                {[...items]
+                  .sort(
+                    (a, b) =>
+                      RISK_RANK[a.risk] - RISK_RANK[b.risk] ||
+                      (a.wos ?? Infinity) - (b.wos ?? Infinity),
+                  )
+                  .map((i, idx) => (
+                    <ItemRow key={`${i.sku}-${idx}`} item={i} />
+                  ))}
               </tbody>
             </table>
           </div>
@@ -298,28 +335,40 @@ export function Inventory() {
   )
 }
 
-function ItemRow({
-  item,
-  targetWos,
-}: {
-  item: InventoryItem
-  targetWos: number
-}) {
-  let color: string | undefined
-  if (item.wos != null) {
-    if (item.wos < targetWos) color = theme.bad
-    else if (item.wos < targetWos + WOS_WATCH_BUFFER) color = theme.warn
-    else color = theme.good
-  }
+const RISK_RANK: Record<RiskLevel, number> = {
+  'At Risk': 0,
+  Reorder: 1,
+  OK: 2,
+  'No Sales': 3,
+}
+
+const RISK_STYLE: Record<RiskLevel, { color: string; rowBg: string; icon: string }> = {
+  'At Risk': { color: theme.bad, rowBg: 'bg-bad/10', icon: '⚠' },
+  Reorder: { color: theme.warn, rowBg: 'bg-warn/5', icon: '↻' },
+  OK: { color: theme.good, rowBg: '', icon: '✓' },
+  'No Sales': { color: theme.textMuted, rowBg: '', icon: '–' },
+}
+
+function ItemRow({ item }: { item: InventoryItem }) {
+  const s = RISK_STYLE[item.risk]
   return (
-    <tr className={item.flagged ? 'bg-bad/5' : ''}>
+    <tr className={s.rowBg}>
       <td className="td font-medium">{item.sku || '—'}</td>
       <td className="td text-muted">{item.description || '—'}</td>
       <td className="td text-right">{item.onHand ?? '—'}</td>
       <td className="td text-right">{item.avgWeeklySales ?? '—'}</td>
       <td className="td text-right">{item.onPo ?? '—'}</td>
-      <td className="td text-right font-semibold" style={{ color }}>
+      <td className="td text-right font-semibold" style={{ color: s.color }}>
         {item.wos == null ? '—' : item.wos.toFixed(1)}
+      </td>
+      <td className="td">
+        <span
+          className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium"
+          style={{ backgroundColor: `${s.color}22`, color: s.color }}
+        >
+          <span aria-hidden>{s.icon}</span>
+          {item.risk}
+        </span>
       </td>
       <td className="td text-right">
         {item.suggestedOrder > 0 ? (

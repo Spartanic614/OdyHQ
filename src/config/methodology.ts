@@ -53,8 +53,9 @@ export const INVENTORY_TARGET_WOS = 4
 // suggested order quantity (avoids double-ordering). Default off.
 export const INVENTORY_INCLUDE_ON_PO = false
 
-// WOS at/under this is "critical" (red); at/under target+buffer is "watch".
-export const WOS_WATCH_BUFFER = 1
+// PO-to-warehouse lead time (weeks). Items with WOS at/under this stock out
+// before a replenishment PO can arrive — the "at risk" line.
+export const INVENTORY_LEAD_TIME_WEEKS = 3
 
 // ---- Trade spend calculator ----
 // Net margin (net profit ÷ sales) at/above this reads "Profitable";
