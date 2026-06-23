@@ -9,6 +9,7 @@ import { Distribution } from './pages/Distribution'
 import { CalendarPage } from './pages/Calendar'
 import { Portfolio } from './pages/Portfolio'
 import { Inventory } from './pages/Inventory'
+import { Merchandising } from './pages/Merchandising'
 import { ComingSoon } from './pages/ComingSoon'
 
 export default function App() {
@@ -41,6 +42,7 @@ export default function App() {
           <Route path="calendar" element={<CalendarPage />} />
           <Route path="portfolio" element={<Portfolio />} />
           <Route path="inventory" element={<Inventory />} />
+          <Route path="merchandising" element={<Merchandising />} />
           <Route
             path="soon/trade-spend"
             element={
