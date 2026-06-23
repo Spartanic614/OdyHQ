@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import {
   calcTradeSpend,
   DEFAULT_TRADE_INPUTS,
@@ -7,6 +7,7 @@ import {
   type TradeSpendInputs,
   type Verdict,
 } from '../lib/tradeSpend'
+import { exportTradeSpendPdf } from '../lib/tradeSpendPdf'
 import { useLocalStorage } from '../lib/useLocalStorage'
 import { TRADE_PROFIT_MARGIN } from '../config/methodology'
 import { fmtUsd, fmtPct, MONTHS } from '../lib/format'
@@ -24,6 +25,16 @@ export function TradeSpend() {
     DEFAULT_TRADE_INPUTS,
   )
   const r = useMemo(() => calcTradeSpend(inputs), [inputs])
+  const [exporting, setExporting] = useState(false)
+
+  const exportPdf = async () => {
+    setExporting(true)
+    try {
+      await exportTradeSpendPdf(inputs)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const setNum = (k: keyof TradeSpendInputs) => (v: string) =>
     setInputs((prev) => ({ ...prev, [k]: Number(v) || 0 }))
@@ -41,12 +52,34 @@ export function TradeSpend() {
             sales to gauge directional profitability.
           </p>
         </div>
-        <button
-          className="btn text-xs"
-          onClick={() => setInputs(DEFAULT_TRADE_INPUTS)}
-        >
-          ↺ Reset
-        </button>
+        <div className="flex items-center gap-2">
+          <input
+            className="input text-sm w-48"
+            placeholder="Account / deal name"
+            value={inputs.dealName}
+            onChange={(e) =>
+              setInputs((p) => ({ ...p, dealName: e.target.value }))
+            }
+          />
+          <button
+            className="btn btn-accent text-xs"
+            onClick={exportPdf}
+            disabled={exporting || inputs.annualSales <= 0}
+            title={
+              inputs.annualSales <= 0
+                ? 'Enter forecasted sales first'
+                : 'Export a PDF summary'
+            }
+          >
+            {exporting ? 'Generating…' : '⤓ Export PDF'}
+          </button>
+          <button
+            className="btn text-xs"
+            onClick={() => setInputs(DEFAULT_TRADE_INPUTS)}
+          >
+            ↺ Reset
+          </button>
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

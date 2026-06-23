@@ -14,6 +14,7 @@ export interface PromoAllowance {
 export type BrokerUnit = 'usd' | 'pct'
 
 export interface TradeSpendInputs {
+  dealName: string
   annualSales: number
   cogs: number // total dollars
   oi: PromoAllowance
@@ -31,6 +32,7 @@ export interface TradeSpendInputs {
 export const emptyPromo = (): PromoAllowance => ({ ratePct: 0, months: [] })
 
 export const DEFAULT_TRADE_INPUTS: TradeSpendInputs = {
+  dealName: '',
   annualSales: 0,
   cogs: 0,
   oi: emptyPromo(),
