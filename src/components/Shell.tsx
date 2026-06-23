@@ -9,6 +9,7 @@ const NAV = [
   { to: '/inventory', label: 'Inventory' },
   { to: '/merchandising', label: 'Merchandising' },
   { to: '/trade-spend', label: 'Trade Spend' },
+  { to: '/margin', label: 'Margin' },
   { to: '/calendar', label: 'Calendar' },
   { to: '/portfolio', label: 'Portfolio' },
 ]
