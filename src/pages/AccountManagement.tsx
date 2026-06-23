@@ -6,9 +6,10 @@ import { DataTable, type Column } from '../components/DataTable'
 import { ChainDrawer } from '../components/drawers'
 import { Pill } from '../components/StatusBadge'
 import { SelectFilter, uniqueValues } from '../components/Filters'
-import { TableSkeleton, ErrorBanner } from '../components/States'
+import { TableSkeleton, ErrorBanner, EmptyState } from '../components/States'
+import { exportCsv } from '../lib/csv'
 import { fmtInt } from '../lib/format'
-import { tierColors } from '../theme'
+import { tierColors, theme } from '../theme'
 import type { ChainPriority, HitListRow } from '../data/selectors'
 
 const MEETING_OPTIONS = [
@@ -19,7 +20,7 @@ const MEETING_OPTIONS = [
   'Executed',
 ]
 
-type Tab = 'tracker' | 'hitlist'
+type Tab = 'tracker' | 'hitlist' | 'mostwanted'
 
 export function AccountManagement() {
   const [tab, setTab] = useState<Tab>('tracker')
@@ -42,14 +43,18 @@ export function AccountManagement() {
           >
             Not-Contacted Hit List
           </button>
+          <button
+            className={`btn text-sm ${tab === 'mostwanted' ? 'btn-accent' : ''}`}
+            onClick={() => setTab('mostwanted')}
+          >
+            Most Wanted
+          </button>
         </div>
       </div>
 
-      {tab === 'tracker' ? (
-        <Tracker onPick={setChainId} />
-      ) : (
-        <HitList onPick={setChainId} />
-      )}
+      {tab === 'tracker' && <Tracker onPick={setChainId} />}
+      {tab === 'hitlist' && <HitList onPick={setChainId} />}
+      {tab === 'mostwanted' && <MostWanted onPick={setChainId} />}
 
       <ChainDrawer chainId={chainId} onClose={() => setChainId(null)} />
     </div>
@@ -233,5 +238,122 @@ function HitList({ onPick }: { onPick: (id: string) => void }) {
       initialSort={{ key: 'size', dir: 'desc' }}
       searchPlaceholder="Search accounts…"
     />
+  )
+}
+
+// ---------------- Most Wanted (retailers ranked by outlet count) ----------------
+function MostWanted({ onPick }: { onPick: (id: string) => void }) {
+  const { chains, loading } = useData()
+  const [am, setAm] = useState('')
+  const [search, setSearch] = useState('')
+
+  // Outlet count = dim_chain.total_universe (the chain's store universe).
+  const ranked = useMemo(
+    () =>
+      chains.rows
+        .filter((c) => (c.total_universe ?? 0) > 0)
+        .filter((c) => !am || c.account_manager === am)
+        .filter((c) =>
+          !search.trim()
+            ? true
+            : (c.chain_name ?? c.chain_id)
+                .toLowerCase()
+                .includes(search.toLowerCase()),
+        )
+        .sort((a, b) => (b.total_universe ?? 0) - (a.total_universe ?? 0)),
+    [chains.rows, am, search],
+  )
+
+  const max = ranked[0]?.total_universe ?? 1
+
+  if (loading) return <TableSkeleton />
+  if (chains.error) return <ErrorBanner table="dim_chain" message={chains.error} />
+
+  return (
+    <div className="card overflow-hidden">
+      <div className="flex flex-wrap items-center gap-2 p-2 border-b border-white/10">
+        <div className="text-sm font-semibold px-1">
+          Most Wanted
+          <span className="text-muted font-normal"> · top retailers by outlet count</span>
+        </div>
+        <div className="flex-1" />
+        <SelectFilter
+          label="AM"
+          value={am}
+          onChange={setAm}
+          options={uniqueValues(chains.rows, (c) => c.account_manager)}
+        />
+        <input
+          className="input w-48"
+          placeholder="Search retailers…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <button
+          className="btn"
+          disabled={!ranked.length}
+          onClick={() =>
+            exportCsv(
+              'most_wanted',
+              ranked.map((c, i) => ({
+                Rank: i + 1,
+                Retailer: c.chain_name ?? c.chain_id,
+                'Outlet Count': c.total_universe,
+                'Account Manager': c.account_manager,
+                Channel: c.channel,
+                Region: c.region,
+              })),
+            )
+          }
+        >
+          ⤓ CSV
+        </button>
+        <span className="text-xs text-muted px-1">{ranked.length} retailers</span>
+      </div>
+
+      {ranked.length === 0 ? (
+        <EmptyState message="No retailers with an outlet count match the current filters." />
+      ) : (
+        <div className="overflow-auto max-h-[70vh] divide-y divide-white/5">
+          {ranked.map((c, i) => {
+            const outlets = c.total_universe ?? 0
+            const pct = max > 0 ? (outlets / max) * 100 : 0
+            return (
+              <button
+                key={c.chain_id}
+                onClick={() => onPick(c.chain_id)}
+                className="w-full text-left px-3 py-2 hover:bg-white/5 transition-colors flex items-center gap-3"
+              >
+                <span className="text-muted text-sm w-7 text-right tabular-nums">
+                  {i + 1}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">
+                    {c.chain_name ?? c.chain_id}
+                  </div>
+                  <div className="text-xs text-muted truncate">
+                    {[c.channel, c.region, c.account_manager ? `AM ${c.account_manager}` : null]
+                      .filter(Boolean)
+                      .join(' · ') || '—'}
+                  </div>
+                  <div className="mt-1.5 h-1.5 rounded bg-white/5 overflow-hidden">
+                    <div
+                      className="h-full rounded"
+                      style={{ width: `${pct}%`, backgroundColor: theme.accent }}
+                    />
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="font-semibold tabular-nums">{fmtInt(outlets)}</div>
+                  <div className="text-[10px] text-muted uppercase tracking-wide">
+                    outlets
+                  </div>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
   )
 }
