@@ -44,6 +44,18 @@ export const NOT_CONTACTED = 'Not Contacted'
 // dim_prospect.contacted value meaning "not yet contacted".
 export const PROSPECT_NOT_CONTACTED = 'No'
 
+// ---- Inventory / reorder tool ----
+// Target Weeks of Supply: items below this are flagged; suggested order
+// refills up to this many weeks of cover.
+export const INVENTORY_TARGET_WOS = 4
+
+// When true, On-PO counts toward current WOS and is netted out of the
+// suggested order quantity (avoids double-ordering). Default off.
+export const INVENTORY_INCLUDE_ON_PO = false
+
+// WOS at/under this is "critical" (red); at/under target+buffer is "watch".
+export const WOS_WATCH_BUFFER = 1
+
 export type Tier = 'A' | 'B' | 'C'
 
 export function tierForScore(score: number): Tier {

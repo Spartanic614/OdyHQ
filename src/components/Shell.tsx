@@ -6,12 +6,12 @@ const NAV = [
   { to: '/', label: 'Overview', end: true },
   { to: '/accounts', label: 'Account Management' },
   { to: '/distribution', label: 'Distribution' },
+  { to: '/inventory', label: 'Inventory' },
   { to: '/calendar', label: 'Calendar' },
   { to: '/portfolio', label: 'Portfolio' },
 ]
 
 const PHASE2 = [
-  { to: '/soon/inventory', label: 'Immediate Inventory' },
   { to: '/soon/trade-spend', label: 'Trade Spend Calculator' },
   { to: '/soon/promomash', label: 'PromoMash' },
   { to: '/soon/dsd-map', label: 'DSD County Map' },

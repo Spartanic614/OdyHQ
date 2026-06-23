@@ -8,6 +8,7 @@ import { AccountManagement } from './pages/AccountManagement'
 import { Distribution } from './pages/Distribution'
 import { CalendarPage } from './pages/Calendar'
 import { Portfolio } from './pages/Portfolio'
+import { Inventory } from './pages/Inventory'
 import { ComingSoon } from './pages/ComingSoon'
 
 export default function App() {
@@ -39,15 +40,7 @@ export default function App() {
           <Route path="distribution" element={<Distribution />} />
           <Route path="calendar" element={<CalendarPage />} />
           <Route path="portfolio" element={<Portfolio />} />
-          <Route
-            path="soon/inventory"
-            element={
-              <ComingSoon
-                title="Immediate Inventory"
-                blurb="Low-stock view across KeHE / UNFI / DSD."
-              />
-            }
-          />
+          <Route path="inventory" element={<Inventory />} />
           <Route
             path="soon/trade-spend"
             element={
