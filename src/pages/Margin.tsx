@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import {
   calcMargin,
   DEFAULT_MARGIN_INPUT,
+  UNITS_PER_CASE,
   type MarginInput,
 } from '../lib/margin'
 import { useLocalStorage } from '../lib/useLocalStorage'
@@ -36,22 +37,17 @@ export function Margin() {
       <div className="grid gap-4 md:grid-cols-2">
         {/* Inputs */}
         <section className="card p-4 space-y-4">
-          <NumField
-            label="Units per case"
-            value={input.unitsPerCase}
-            onChange={set('unitsPerCase')}
-            step={1}
-          />
+          <div className="text-xs text-muted">
+            Case = {UNITS_PER_CASE} singles (12-pack → singles at retail).
+          </div>
           <LinkedPair
             label="Cost"
             unit={input.costUnit}
-            unitsPerCase={input.unitsPerCase}
             onUnit={set('costUnit')}
           />
           <LinkedPair
             label="Price"
             unit={input.priceUnit}
-            unitsPerCase={input.unitsPerCase}
             onUnit={set('priceUnit')}
           />
           <button
@@ -108,7 +104,7 @@ export function Margin() {
             <tr>
               <th className="th">Metric</th>
               <th className="th text-right">Per Unit</th>
-              <th className="th text-right">Per Case ({input.unitsPerCase})</th>
+              <th className="th text-right">Per Case ({UNITS_PER_CASE})</th>
             </tr>
           </thead>
           <tbody>
@@ -143,15 +139,13 @@ export function Margin() {
 function LinkedPair({
   label,
   unit,
-  unitsPerCase,
   onUnit,
 }: {
   label: string
   unit: number
-  unitsPerCase: number
   onUnit: (v: number) => void
 }) {
-  const upc = unitsPerCase > 0 ? unitsPerCase : 1
+  const upc = UNITS_PER_CASE
   return (
     <div className="space-y-1.5">
       <div className="text-xs uppercase tracking-wide text-muted">{label}</div>
@@ -269,28 +263,3 @@ function MoneyField({
   )
 }
 
-function NumField({
-  label,
-  value,
-  onChange,
-  step = 1,
-}: {
-  label: string
-  value: number
-  onChange: (v: number) => void
-  step?: number
-}) {
-  return (
-    <label className="block space-y-1">
-      <span className="text-xs uppercase tracking-wide text-muted">{label}</span>
-      <input
-        type="number"
-        min={1}
-        step={step}
-        className="input w-full text-right"
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value) || 0)}
-      />
-    </label>
-  )
-}

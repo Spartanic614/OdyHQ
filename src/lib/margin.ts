@@ -1,19 +1,21 @@
 // ============================================================
 // Margin calculator model. Pure functions.
-// Canonical values are per-unit; per-case is derived via unitsPerCase.
-// Editing either basis keeps both in sync (case = unit × unitsPerCase).
+// Canonical values are per-unit; per-case is derived.
+// Case = 12 singles (we primarily deal in 12-packs → singles at retail),
+// so units-per-case is fixed.
 // ============================================================
+
+// Fixed pack size: 12 singles per case.
+export const UNITS_PER_CASE = 12
 
 export interface MarginInput {
   costUnit: number
   priceUnit: number
-  unitsPerCase: number
 }
 
 export const DEFAULT_MARGIN_INPUT: MarginInput = {
   costUnit: 0,
   priceUnit: 0,
-  unitsPerCase: 12,
 }
 
 export interface MarginResult {
@@ -28,7 +30,7 @@ export interface MarginResult {
 }
 
 export function calcMargin(input: MarginInput): MarginResult {
-  const u = input.unitsPerCase > 0 ? input.unitsPerCase : 1
+  const u = UNITS_PER_CASE
   const { costUnit, priceUnit } = input
   return {
     costUnit,
