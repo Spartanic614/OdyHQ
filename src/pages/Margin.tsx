@@ -2,16 +2,17 @@ import { useMemo } from 'react'
 import {
   calcMargin,
   DEFAULT_MARGIN_INPUT,
-  type Basis,
   type MarginInput,
 } from '../lib/margin'
 import { useLocalStorage } from '../lib/useLocalStorage'
 import { fmtUsd, fmtPct } from '../lib/format'
 import { theme } from '../theme'
 
+const round2 = (n: number) => Math.round(n * 100) / 100
+
 export function Margin() {
   const [input, setInput] = useLocalStorage<MarginInput>(
-    'margin_input',
+    'margin_input_v2',
     DEFAULT_MARGIN_INPUT,
   )
   const r = useMemo(() => calcMargin(input), [input])
@@ -21,44 +22,37 @@ export function Margin() {
 
   const marginColor =
     r.marginPct == null ? theme.textMuted : r.marginPct >= 0 ? theme.good : theme.bad
-  const basisLabel = input.basis === 'unit' ? 'unit' : 'case'
 
   return (
     <div className="space-y-4 max-w-3xl">
       <div>
         <h1 className="text-xl font-semibold">Margin Calculator</h1>
         <p className="text-sm text-muted">
-          Enter cost and price to see gross margin, markup, and profit — per
-          unit or per case.
+          Enter cost and price by unit or by case — the other basis fills in
+          automatically — to see gross margin, markup, and profit.
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         {/* Inputs */}
         <section className="card p-4 space-y-4">
-          <div className="space-y-1.5">
-            <div className="text-xs uppercase tracking-wide text-muted">Basis</div>
-            <Segmented
-              value={input.basis}
-              onChange={(b) => setInput((p) => ({ ...p, basis: b }))}
-            />
-          </div>
-
-          <MoneyField
-            label={`Cost (per ${basisLabel})`}
-            value={input.cost}
-            onChange={set('cost')}
-          />
-          <MoneyField
-            label={`Price (per ${basisLabel})`}
-            value={input.price}
-            onChange={set('price')}
-          />
           <NumField
             label="Units per case"
             value={input.unitsPerCase}
             onChange={set('unitsPerCase')}
             step={1}
+          />
+          <LinkedPair
+            label="Cost"
+            unit={input.costUnit}
+            unitsPerCase={input.unitsPerCase}
+            onUnit={set('costUnit')}
+          />
+          <LinkedPair
+            label="Price"
+            unit={input.priceUnit}
+            unitsPerCase={input.unitsPerCase}
+            onUnit={set('priceUnit')}
           />
           <button
             className="btn text-xs"
@@ -88,9 +82,13 @@ export function Margin() {
           <div className="text-sm mt-1">
             Profit{' '}
             <span className="font-semibold" style={{ color: marginColor }}>
-              {fmtUsd(input.basis === 'unit' ? r.profitUnit : r.profitCase)}
-            </span>{' '}
-            / {basisLabel}
+              {fmtUsd(r.profitUnit)}
+            </span>
+            /unit ·{' '}
+            <span className="font-semibold" style={{ color: marginColor }}>
+              {fmtUsd(r.profitCase)}
+            </span>
+            /case
           </div>
         </section>
       </div>
@@ -99,10 +97,7 @@ export function Margin() {
       {r.priceUnit > 0 && (
         <section className="card p-4 space-y-2">
           <div className="text-sm font-semibold">Price composition</div>
-          <CompositionBar
-            cost={input.basis === 'unit' ? r.costUnit : r.costCase}
-            price={input.basis === 'unit' ? r.priceUnit : r.priceCase}
-          />
+          <CompositionBar cost={r.costUnit} price={r.priceUnit} />
         </section>
       )}
 
@@ -143,30 +138,31 @@ export function Margin() {
   )
 }
 
-function Segmented({
-  value,
-  onChange,
+// A cost/price row with linked Per-unit and Per-case money fields.
+// Per-unit is canonical; editing either keeps both in sync.
+function LinkedPair({
+  label,
+  unit,
+  unitsPerCase,
+  onUnit,
 }: {
-  value: Basis
-  onChange: (b: Basis) => void
+  label: string
+  unit: number
+  unitsPerCase: number
+  onUnit: (v: number) => void
 }) {
-  const opts: { v: Basis; label: string }[] = [
-    { v: 'unit', label: 'Per Unit' },
-    { v: 'case', label: 'Per Case' },
-  ]
+  const upc = unitsPerCase > 0 ? unitsPerCase : 1
   return (
-    <div className="inline-flex p-0.5 rounded-lg border border-white/10 bg-white/5">
-      {opts.map((o) => (
-        <button
-          key={o.v}
-          onClick={() => onChange(o.v)}
-          className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
-            value === o.v ? 'btn-accent' : 'text-muted hover:text-text'
-          }`}
-        >
-          {o.label}
-        </button>
-      ))}
+    <div className="space-y-1.5">
+      <div className="text-xs uppercase tracking-wide text-muted">{label}</div>
+      <div className="grid grid-cols-2 gap-2">
+        <MoneyField label="Per unit" value={unit} onChange={onUnit} />
+        <MoneyField
+          label="Per case"
+          value={round2(unit * upc)}
+          onChange={(v) => onUnit(v / upc)}
+        />
+      </div>
     </div>
   )
 }
@@ -255,9 +251,9 @@ function MoneyField({
 }) {
   return (
     <label className="block space-y-1">
-      <span className="text-xs uppercase tracking-wide text-muted">{label}</span>
+      <span className="text-[10px] uppercase tracking-wide text-muted">{label}</span>
       <div className="flex items-center">
-        <span className="px-2.5 py-1.5 bg-ink-900 border border-r-0 border-white/10 rounded-l-lg text-muted">
+        <span className="px-2 py-1.5 bg-ink-900 border border-r-0 border-white/10 rounded-l-lg text-muted">
           $
         </span>
         <input
