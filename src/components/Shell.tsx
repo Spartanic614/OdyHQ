@@ -25,12 +25,14 @@ export function Shell() {
 
   return (
     <div className="flex h-full">
-      <aside className="w-56 shrink-0 bg-ink-900 border-r border-ink-700 flex flex-col">
-        <div className="px-4 py-4 border-b border-ink-700">
-          <div className="text-lg font-bold tracking-tight">
-            Odyssey<span className="text-accent"> Mothership</span>
+      <aside className="w-56 shrink-0 glass-nav border-r border-white/10 flex flex-col">
+        <div className="px-4 py-4 border-b border-white/10">
+          <div className="text-lg font-bold tracking-tight brand">
+            Odyssey Mothership
           </div>
-          <div className="text-[11px] text-muted">Sales decision tool</div>
+          <div className="text-[11px] text-muted tracking-wide">
+            Sales decision tool
+          </div>
         </div>
         <nav className="flex-1 overflow-auto py-2">
           {NAV.map((n) => (
@@ -39,10 +41,10 @@ export function Shell() {
               to={n.to}
               end={n.end}
               className={({ isActive }) =>
-                `block px-4 py-2 text-sm border-l-2 ${
+                `block px-4 py-2 text-sm border-l-2 transition-colors ${
                   isActive
-                    ? 'border-accent bg-ink-800 text-text'
-                    : 'border-transparent text-muted hover:text-text hover:bg-ink-800/60'
+                    ? 'border-accent bg-white/10 text-text'
+                    : 'border-transparent text-muted hover:text-text hover:bg-white/5'
                 }`
               }
             >
@@ -57,10 +59,10 @@ export function Shell() {
               key={n.to}
               to={n.to}
               className={({ isActive }) =>
-                `block px-4 py-1.5 text-xs border-l-2 ${
+                `block px-4 py-1.5 text-xs border-l-2 transition-colors ${
                   isActive
-                    ? 'border-ink-500 bg-ink-800 text-muted'
-                    : 'border-transparent text-muted/60 hover:text-muted hover:bg-ink-800/40'
+                    ? 'border-ink-500 bg-white/5 text-muted'
+                    : 'border-transparent text-muted/60 hover:text-muted hover:bg-white/5'
                 }`
               }
             >
@@ -72,7 +74,7 @@ export function Shell() {
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-12 shrink-0 border-b border-ink-700 bg-ink-900 flex items-center gap-3 px-4">
+        <header className="h-12 shrink-0 border-b border-white/10 glass-nav flex items-center gap-3 px-4">
           <div className="flex-1" />
           <button
             className="btn text-xs"

@@ -17,12 +17,12 @@ export function DetailDrawer({
   return (
     <div className="fixed inset-0 z-40 flex justify-end">
       <div
-        className="absolute inset-0 bg-black/50"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden
       />
-      <div className="relative w-full max-w-xl bg-ink-800 border-l border-ink-600 h-full overflow-auto shadow-2xl">
-        <div className="sticky top-0 bg-ink-800 border-b border-ink-700 px-5 py-3 flex items-start justify-between">
+      <div className="relative w-full max-w-xl glass-nav border-l border-white/10 h-full overflow-auto shadow-2xl">
+        <div className="sticky top-0 glass-nav border-b border-white/10 px-5 py-3 flex items-start justify-between">
           <div>
             <h2 className="text-lg font-semibold">{title}</h2>
             {subtitle && <div className="text-sm text-muted">{subtitle}</div>}

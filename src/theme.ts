@@ -1,55 +1,54 @@
 // ============================================================
-// Brand palette — single source of truth.
-// Swap in the real Odyssey brand by editing these values
-// (and the mirrored entries in tailwind.config.js).
+// Brand palette — single source of truth (mirrors tailwind.config.js).
+// Aesthetic: futuristic "Apple Glass" — graphite, steel, silver.
+// Swap the brand by editing these values + the tailwind mirror.
 // ============================================================
 
 export const theme = {
-  // Surfaces (dark, dense dashboard)
-  bg: '#0b0f17',
-  surface: '#111726',
-  surfaceAlt: '#1a2133',
-  border: '#252e44',
+  // Surfaces (graphite base; glass translucency handled in index.css)
+  bg: '#0a0c0f',
+  surface: '#13161b',
+  surfaceAlt: '#1b1f26',
+  border: '#2a2f38',
 
   // Text
-  text: '#e6eaf2',
-  textMuted: '#8b94a7',
+  text: '#eceef1',
+  textMuted: '#959dab',
 
-  // Brand accent (one vivid accent)
-  accent: '#3b82f6',
-  accentSoft: '#1e3a8a',
+  // Brand accent — polished silver / steel
+  accent: '#c2cad4',
+  accentSoft: '#2b313a',
 
-  // Semantic — status colors. NEVER encode status by color alone;
-  // always pair with an icon + label (see StatusBadge).
-  good: '#22c55e', // Authorized
-  bad: '#ef4444', // Not Authorized / risk
-  warn: '#f59e0b',
-  neutral: '#64748b',
+  // Semantic — never encode status by color alone; pair with icon + label.
+  good: '#34d399', // Authorized
+  bad: '#fb7185', // Not Authorized / risk
+  warn: '#fbbf24',
+  neutral: '#6b7280',
 } as const
 
-// Calendar event-type colors (also used in chart legends).
+// Calendar event-type colors (cool metallic, still distinguishable).
 export const eventColors: Record<string, string> = {
-  'Retailer Promo': '#3b82f6',
-  'Distributor Promo': '#a855f7',
-  Merchandising: '#22c55e',
-  'Trade Show': '#f59e0b',
+  'Retailer Promo': '#9db4c9',
+  'Distributor Promo': '#b6a7c2',
+  Merchandising: '#79c2b0',
+  'Trade Show': '#d4b58c',
 }
 
 // Priority tier colors.
 export const tierColors: Record<string, string> = {
-  A: '#ef4444',
-  B: '#f59e0b',
-  C: '#64748b',
+  A: '#fb7185',
+  B: '#fbbf24',
+  C: '#6b7280',
 }
 
-// Generic categorical palette for charts.
+// Categorical chart palette — cool steels/silvers with two warm accents.
 export const chartPalette = [
-  '#3b82f6',
-  '#a855f7',
-  '#22c55e',
-  '#f59e0b',
-  '#ef4444',
-  '#06b6d4',
-  '#ec4899',
-  '#84cc16',
+  '#9db4c9',
+  '#c6cdd6',
+  '#6f8aa0',
+  '#79c2b0',
+  '#b6a7c2',
+  '#8f9aa8',
+  '#d4b58c',
+  '#a7c4a0',
 ]

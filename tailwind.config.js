@@ -4,22 +4,36 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Mirrors src/theme.ts — swap brand here + there in one place.
+        // Mirrors src/theme.ts — graphite / steel / silver. Opaque steps are
+        // kept opaque (sticky table headers, solid fills); glass translucency
+        // lives in index.css (.card / .glass / .glass-nav).
         ink: {
-          900: '#0b0f17',
-          800: '#111726',
-          700: '#1a2133',
-          600: '#252e44',
-          500: '#33405c',
+          900: '#0a0c0f', // near-black graphite (base)
+          800: '#13161b', // panel / sticky header
+          700: '#1b1f26', // raised
+          600: '#2a2f38', // border / elevated
+          500: '#3c434e', // steel line
         },
         accent: {
-          DEFAULT: '#3b82f6',
-          soft: '#1e3a8a',
+          DEFAULT: '#c2cad4', // polished silver
+          soft: '#2b313a',
         },
-        good: '#22c55e',
-        bad: '#ef4444',
-        warn: '#f59e0b',
-        muted: '#8b94a7',
+        good: '#34d399',
+        bad: '#fb7185',
+        warn: '#fbbf24',
+        muted: '#959dab', // steel gray
+      },
+      fontFamily: {
+        sans: [
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'SF Pro Display',
+          'Segoe UI',
+          'Roboto',
+          'Helvetica',
+          'Arial',
+          'sans-serif',
+        ],
       },
     },
   },

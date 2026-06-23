@@ -24,8 +24,8 @@ export function Login() {
         className="card p-6 w-full max-w-sm space-y-4"
       >
         <div>
-          <div className="text-xl font-bold">
-            Odyssey<span className="text-accent"> Mothership</span>
+          <div className="text-2xl font-bold tracking-tight brand">
+            Odyssey Mothership
           </div>
           <div className="text-sm text-muted">Sign in to continue</div>
         </div>
