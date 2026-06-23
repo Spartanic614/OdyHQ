@@ -8,12 +8,12 @@ const NAV = [
   { to: '/distribution', label: 'Distribution' },
   { to: '/inventory', label: 'Inventory' },
   { to: '/merchandising', label: 'Merchandising' },
+  { to: '/trade-spend', label: 'Trade Spend' },
   { to: '/calendar', label: 'Calendar' },
   { to: '/portfolio', label: 'Portfolio' },
 ]
 
 const PHASE2 = [
-  { to: '/soon/trade-spend', label: 'Trade Spend Calculator' },
   { to: '/soon/promomash', label: 'PromoMash' },
   { to: '/soon/dsd-map', label: 'DSD County Map' },
   { to: '/soon/merch', label: 'Merch One-Pagers' },

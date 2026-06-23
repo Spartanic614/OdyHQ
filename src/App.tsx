@@ -10,6 +10,7 @@ import { CalendarPage } from './pages/Calendar'
 import { Portfolio } from './pages/Portfolio'
 import { Inventory } from './pages/Inventory'
 import { Merchandising } from './pages/Merchandising'
+import { TradeSpend } from './pages/TradeSpend'
 import { ComingSoon } from './pages/ComingSoon'
 
 export default function App() {
@@ -43,15 +44,7 @@ export default function App() {
           <Route path="portfolio" element={<Portfolio />} />
           <Route path="inventory" element={<Inventory />} />
           <Route path="merchandising" element={<Merchandising />} />
-          <Route
-            path="soon/trade-spend"
-            element={
-              <ComingSoon
-                title="Trade Spend Calculator"
-                blurb="Port of odyssey_promo_calculator.xlsx."
-              />
-            }
-          />
+          <Route path="trade-spend" element={<TradeSpend />} />
           <Route
             path="soon/promomash"
             element={<ComingSoon title="PromoMash" blurb="Promo planning integration." />}

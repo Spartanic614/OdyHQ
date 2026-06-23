@@ -56,6 +56,11 @@ export const INVENTORY_INCLUDE_ON_PO = false
 // WOS at/under this is "critical" (red); at/under target+buffer is "watch".
 export const WOS_WATCH_BUFFER = 1
 
+// ---- Trade spend calculator ----
+// Net margin (net profit ÷ sales) at/above this reads "Profitable";
+// between 0 and this reads "Breakeven"; below 0 reads "In the Red".
+export const TRADE_PROFIT_MARGIN = 0.05
+
 export type Tier = 'A' | 'B' | 'C'
 
 export function tierForScore(score: number): Tier {
