@@ -12,6 +12,7 @@ const NAV = [
   { to: '/margin', label: 'Margin' },
   { to: '/calendar', label: 'Calendar' },
   { to: '/portfolio', label: 'Portfolio' },
+  { to: '/credentials', label: 'Links & Logins' },
 ]
 
 const PHASE2 = [

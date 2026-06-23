@@ -154,6 +154,12 @@ const SPECS: TableSpec[] = [
     mode: 'reload',
     columns: ['distributor', 'fee', 'cost', 'definition'],
   },
+  {
+    table: 'ref_app_credentials',
+    sheets: ['ref_app_credentials', 'credentials', 'logins', 'app_links', 'links', 'passwords'],
+    mode: 'reload',
+    columns: ['app_name', 'category', 'url', 'username', 'password', 'notes'],
+  },
 ]
 
 function coerceNumber(v: unknown): number | null {

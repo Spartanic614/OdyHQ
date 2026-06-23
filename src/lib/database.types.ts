@@ -12,6 +12,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      ref_app_credentials: {
+        Row: {
+          app_name: string | null
+          category: string | null
+          id: number
+          notes: string | null
+          password: string | null
+          updated_at: string | null
+          url: string | null
+          username: string | null
+        }
+        Insert: {
+          app_name?: string | null
+          category?: string | null
+          id?: never
+          notes?: string | null
+          password?: string | null
+          updated_at?: string | null
+          url?: string | null
+          username?: string | null
+        }
+        Update: {
+          app_name?: string | null
+          category?: string | null
+          id?: never
+          notes?: string | null
+          password?: string | null
+          updated_at?: string | null
+          url?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
       bridge_dc_anchor: {
         Row: {
           anchor_chain_id: string | null

@@ -12,6 +12,7 @@ import { Inventory } from './pages/Inventory'
 import { Merchandising } from './pages/Merchandising'
 import { TradeSpend } from './pages/TradeSpend'
 import { Margin } from './pages/Margin'
+import { Credentials } from './pages/Credentials'
 import { ComingSoon } from './pages/ComingSoon'
 
 export default function App() {
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="merchandising" element={<Merchandising />} />
           <Route path="trade-spend" element={<TradeSpend />} />
           <Route path="margin" element={<Margin />} />
+          <Route path="credentials" element={<Credentials />} />
           <Route
             path="soon/promomash"
             element={<ComingSoon title="PromoMash" blurb="Promo planning integration." />}
