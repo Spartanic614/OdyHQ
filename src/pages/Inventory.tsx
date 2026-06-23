@@ -37,7 +37,17 @@ export function Inventory() {
   const [editedMessage, setEditedMessage] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
-  const parsed = useMemo(() => parsePaste(text), [text])
+  // Parse defensively — malformed paste should show a message, never crash.
+  const { parsed, parseError } = useMemo(() => {
+    try {
+      return { parsed: parsePaste(text), parseError: null as string | null }
+    } catch (e) {
+      return {
+        parsed: { headers: [], rows: [], detected: {} as ColumnMap },
+        parseError: e instanceof Error ? e.message : String(e),
+      }
+    }
+  }, [text])
 
   // Effective column mapping = auto-detected, with manual overrides on top.
   const map = useMemo<ColumnMap>(
@@ -45,24 +55,28 @@ export function Inventory() {
     [parsed.detected, overrideMap],
   )
 
-  const items = useMemo(
-    () =>
-      buildItems(parsed.rows, map, distributor, {
+  const items = useMemo(() => {
+    try {
+      return buildItems(parsed.rows, map, distributor, {
         targetWos,
         includeOnPo,
         leadTimeWeeks,
-      }),
-    [parsed.rows, map, distributor, targetWos, includeOnPo, leadTimeWeeks],
-  )
+      })
+    } catch {
+      return []
+    }
+  }, [parsed.rows, map, distributor, targetWos, includeOnPo, leadTimeWeeks])
 
   const atRiskCount = items.filter((i) => i.risk === 'At Risk').length
   const reorderCount = items.filter((i) => i.risk === 'Reorder').length
 
-  const generatedMessage = useMemo(
-    () =>
-      buildMessage(items, { targetWos, includeOnPo, leadTimeWeeks }, greeting),
-    [items, targetWos, includeOnPo, leadTimeWeeks, greeting],
-  )
+  const generatedMessage = useMemo(() => {
+    try {
+      return buildMessage(items, { targetWos, includeOnPo, leadTimeWeeks }, greeting)
+    } catch {
+      return ''
+    }
+  }, [items, targetWos, includeOnPo, leadTimeWeeks, greeting])
   const message = editedMessage ?? generatedMessage
 
   const hasData = parsed.rows.length > 0
@@ -181,6 +195,12 @@ export function Inventory() {
             setEditedMessage(null)
           }}
         />
+        {parseError && (
+          <div className="text-xs text-bad">
+            Couldn&apos;t read this paste ({parseError}). Try copying just the
+            header row plus data rows.
+          </div>
+        )}
       </div>
 
       {/* Column mapping */}

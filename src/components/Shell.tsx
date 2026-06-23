@@ -1,6 +1,7 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
 import { useData } from '../data/store'
+import { ErrorBoundary } from './ErrorBoundary'
 
 const NAV = [
   { to: '/', label: 'Overview', end: true },
@@ -24,6 +25,7 @@ const PHASE2 = [
 export function Shell() {
   const { user, signOut } = useAuth()
   const { lastRefresh, refresh, loading } = useData()
+  const location = useLocation()
 
   return (
     <div className="flex h-full">
@@ -100,7 +102,10 @@ export function Shell() {
         </header>
 
         <main className="flex-1 overflow-auto p-5">
-          <Outlet />
+          {/* Keyed by route so navigating to another page clears any error. */}
+          <ErrorBoundary key={location.pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
     </div>
