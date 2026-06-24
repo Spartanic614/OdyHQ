@@ -7,7 +7,9 @@
       "WebSearch",
       "mcp__329c417e-84e6-4a37-ac00-08d8ee60bb95__list_projects",
       "mcp__329c417e-84e6-4a37-ac00-08d8ee60bb95__list_tables",
-      "mcp__329c417e-84e6-4a37-ac00-08d8ee60bb95__generate_typescript_types"
+      "mcp__329c417e-84e6-4a37-ac00-08d8ee60bb95__generate_typescript_types",
+      "mcp__329c417e-84e6-4a37-ac00-08d8ee60bb95__execute_sql",
+      "mcp__329c417e-84e6-4a37-ac00-08d8ee60bb95__apply_migration"
     ]
   }
 }

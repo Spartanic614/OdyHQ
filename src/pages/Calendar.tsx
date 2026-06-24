@@ -12,6 +12,8 @@ const EVENT_TYPES = [
   'Distributor Promo',
   'Merchandising',
   'Trade Show',
+  'KeHE Roadmap',
+  'UNFI Roadmap',
 ]
 
 export function CalendarPage() {

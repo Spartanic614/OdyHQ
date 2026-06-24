@@ -32,6 +32,8 @@ export const eventColors: Record<string, string> = {
   'Distributor Promo': '#b6a7c2',
   Merchandising: '#79c2b0',
   'Trade Show': '#d4b58c',
+  'KeHE Roadmap': '#cf9a86',
+  'UNFI Roadmap': '#6fc0c0',
 }
 
 // Priority tier colors.
