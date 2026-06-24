@@ -67,6 +67,9 @@ export const INVENTORY_CASES_PER_LAYER = 26
 // between 0 and this reads "Breakeven"; below 0 reads "In the Red".
 export const TRADE_PROFIT_MARGIN = 0.05
 
+// Odyssey cost of goods for a single 12-pack case (default; editable in-app).
+export const COGS_PER_CASE = 10
+
 // ---- Channel groups for the Most Wanted boxes ----
 // Maps raw dim_chain.channel values to a group. Edit these alias lists to
 // match the channel flags in the real dataset (matched case-insensitively:

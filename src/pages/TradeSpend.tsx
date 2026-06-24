@@ -10,7 +10,7 @@ import {
 import { exportTradeSpendPdf } from '../lib/tradeSpendPdf'
 import { useLocalStorage } from '../lib/useLocalStorage'
 import { TRADE_PROFIT_MARGIN } from '../config/methodology'
-import { fmtUsd, fmtPct, MONTHS } from '../lib/format'
+import { fmtUsd, fmtPct, fmtInt, MONTHS } from '../lib/format'
 import { theme } from '../theme'
 
 const VERDICT_STYLE: Record<Verdict, { color: string; icon: string; blurb: string }> = {
@@ -21,7 +21,7 @@ const VERDICT_STYLE: Record<Verdict, { color: string; icon: string; blurb: strin
 
 export function TradeSpend() {
   const [inputs, setInputs] = useLocalStorage<TradeSpendInputs>(
-    'trade_spend_inputs',
+    'trade_spend_inputs_v2',
     DEFAULT_TRADE_INPUTS,
   )
   const r = useMemo(() => calcTradeSpend(inputs), [inputs])
@@ -64,10 +64,10 @@ export function TradeSpend() {
           <button
             className="btn btn-accent text-xs"
             onClick={exportPdf}
-            disabled={exporting || inputs.annualSales <= 0}
+            disabled={exporting || r.sales <= 0}
             title={
-              inputs.annualSales <= 0
-                ? 'Enter forecasted sales first'
+              r.sales <= 0
+                ? 'Enter forecasted cases and price/case first'
                 : 'Export a PDF summary'
             }
           >
@@ -86,9 +86,19 @@ export function TradeSpend() {
         {/* ---------- Inputs ---------- */}
         <div className="space-y-4">
           <section className="card p-3 space-y-3">
-            <div className="text-sm font-semibold">Sales & COGS</div>
-            <Money label="Forecasted annual sales" value={inputs.annualSales} onChange={setNum('annualSales')} />
-            <Money label="Odyssey COGS (total $)" value={inputs.cogs} onChange={setNum('cogs')} />
+            <div className="text-sm font-semibold">Volume & economics</div>
+            <Cases
+              label="Forecasted annual sales (12-pk cases)"
+              value={inputs.annualCases}
+              onChange={setNum('annualCases')}
+            />
+            <Money label="Sell price / case" value={inputs.pricePerCase} onChange={setNum('pricePerCase')} />
+            <Money label="COGS / case (12-pack)" value={inputs.cogsPerCase} onChange={setNum('cogsPerCase')} />
+            <div className="text-xs text-muted border-t border-white/10 pt-2">
+              = <span className="text-text">{fmtUsd(r.sales)}</span> revenue ·{' '}
+              <span className="text-text">{fmtUsd(r.cogs)}</span> COGS ·{' '}
+              <span className="text-text">{fmtUsd(r.grossProfit)}</span> gross profit
+            </div>
           </section>
 
           <section className="card p-3 space-y-4">
@@ -125,19 +135,27 @@ export function TradeSpend() {
           {/* Summary numbers */}
           <section className="card p-3 space-y-2">
             <div className="text-sm font-semibold">Summary</div>
-            <Stat label="Forecasted sales" value={fmtUsd(inputs.annualSales)} />
+            <Stat
+              label="Forecasted sales"
+              value={fmtUsd(r.sales)}
+              sub={
+                inputs.annualCases > 0
+                  ? `${fmtInt(inputs.annualCases)} cases × ${fmtUsd(inputs.pricePerCase)}`
+                  : undefined
+              }
+            />
             <Stat label="Gross profit (sales − COGS)" value={fmtUsd(r.grossProfit)} />
             <Stat
               label="Total trade spend"
               value={fmtUsd(r.totalTradeSpend)}
-              sub={inputs.annualSales > 0 ? `${fmtPct(r.tradeSpendRate, 1)} of sales` : undefined}
+              sub={r.sales > 0 ? `${fmtPct(r.tradeSpendRate, 1)} of sales` : undefined}
             />
             <div className="border-t border-ink-700 my-1" />
             <Stat
               label="Net profit"
               value={fmtUsd(r.netProfit)}
               valueColor={r.netProfit >= 0 ? theme.good : theme.bad}
-              sub={inputs.annualSales > 0 ? `${fmtPct(r.netMargin, 1)} net margin` : undefined}
+              sub={r.sales > 0 ? `${fmtPct(r.netMargin, 1)} net margin` : undefined}
               bold
             />
           </section>
@@ -157,8 +175,8 @@ export function TradeSpend() {
                     </td>
                     <td className="td text-right">{fmtUsd(li.amount)}</td>
                     <td className="td text-right text-muted w-16">
-                      {inputs.annualSales > 0 && li.amount > 0
-                        ? fmtPct(li.amount / inputs.annualSales, 1)
+                      {r.sales > 0 && li.amount > 0
+                        ? fmtPct(li.amount / r.sales, 1)
                         : ''}
                     </td>
                   </tr>
@@ -167,7 +185,7 @@ export function TradeSpend() {
                   <td className="td">Total trade spend</td>
                   <td className="td text-right">{fmtUsd(r.totalTradeSpend)}</td>
                   <td className="td text-right text-muted">
-                    {inputs.annualSales > 0 ? fmtPct(r.tradeSpendRate, 1) : ''}
+                    {r.sales > 0 ? fmtPct(r.tradeSpendRate, 1) : ''}
                   </td>
                 </tr>
               </tbody>
@@ -175,7 +193,7 @@ export function TradeSpend() {
           </section>
 
           {/* Where the sales dollar goes */}
-          {inputs.annualSales > 0 && <DollarBar result={r} sales={inputs.annualSales} cogs={inputs.cogs} />}
+          {r.sales > 0 && <DollarBar result={r} sales={r.sales} cogs={r.cogs} />}
         </div>
       </div>
     </div>
@@ -287,6 +305,31 @@ function Money({
           onChange={(e) => onChange(e.target.value)}
         />
       </div>
+    </label>
+  )
+}
+
+// Plain integer field (e.g. case count) — no $ adornment.
+function Cases({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: number
+  onChange: (v: string) => void
+}) {
+  return (
+    <label className="flex items-center justify-between gap-3 text-sm">
+      <span className="text-muted">{label}</span>
+      <input
+        type="number"
+        min={0}
+        step={1}
+        className="input w-40 text-right"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
     </label>
   )
 }

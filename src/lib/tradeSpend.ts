@@ -1,9 +1,10 @@
 // ============================================================
 // Trade spend calculator model. Pure functions.
-// Promotional allowances (O/I, MCB, TPR) are % of sales applied to the
-// sales falling in the selected months; COGS is a total dollar amount.
+// Volume is entered in 12-pack cases; revenue = cases × sell price/case,
+// COGS = cases × cost/case. Promo allowances (O/I, MCB, TPR) are % of
+// revenue applied to the months selected.
 // ============================================================
-import { TRADE_PROFIT_MARGIN } from '../config/methodology'
+import { COGS_PER_CASE, TRADE_PROFIT_MARGIN } from '../config/methodology'
 
 // A promo allowance: a % rate that runs only in the chosen months (1–12).
 export interface PromoAllowance {
@@ -15,8 +16,9 @@ export type BrokerUnit = 'usd' | 'pct'
 
 export interface TradeSpendInputs {
   dealName: string
-  annualSales: number
-  cogs: number // total dollars
+  annualCases: number // forecasted annual volume in 12-pack cases
+  pricePerCase: number // $ sell price per case (revenue per case)
+  cogsPerCase: number // $ cost of goods per 12-pack case
   oi: PromoAllowance
   mcb: PromoAllowance
   tpr: PromoAllowance
@@ -33,8 +35,9 @@ export const emptyPromo = (): PromoAllowance => ({ ratePct: 0, months: [] })
 
 export const DEFAULT_TRADE_INPUTS: TradeSpendInputs = {
   dealName: '',
-  annualSales: 0,
-  cogs: 0,
+  annualCases: 0,
+  pricePerCase: 0,
+  cogsPerCase: COGS_PER_CASE,
   oi: emptyPromo(),
   mcb: emptyPromo(),
   tpr: emptyPromo(),
@@ -57,6 +60,8 @@ export interface LineItem {
 }
 
 export interface TradeSpendResult {
+  sales: number // derived revenue ($) = cases × price/case
+  cogs: number // derived COGS ($) = cases × cost/case
   monthlySales: number
   oiCost: number
   mcbCost: number
@@ -88,7 +93,8 @@ export function classify(
 }
 
 export function calcTradeSpend(input: TradeSpendInputs): TradeSpendResult {
-  const sales = input.annualSales || 0
+  const sales = (input.annualCases || 0) * (input.pricePerCase || 0)
+  const cogs = (input.annualCases || 0) * (input.cogsPerCase || 0)
   const monthlySales = sales / 12
 
   const oiCost = promoCost(input.oi, monthlySales)
@@ -107,7 +113,7 @@ export function calcTradeSpend(input: TradeSpendInputs): TradeSpendResult {
     input.other
 
   const totalTradeSpend = promoTotal + brokerCost + oneTimeTotal
-  const grossProfit = sales - input.cogs
+  const grossProfit = sales - cogs
   const netProfit = grossProfit - totalTradeSpend
   const netMargin = sales > 0 ? netProfit / sales : 0
   const tradeSpendRate = sales > 0 ? totalTradeSpend / sales : 0
@@ -125,6 +131,8 @@ export function calcTradeSpend(input: TradeSpendInputs): TradeSpendResult {
   ]
 
   return {
+    sales,
+    cogs,
     monthlySales,
     oiCost,
     mcbCost,

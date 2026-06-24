@@ -122,13 +122,23 @@ export async function buildTradeSpendDoc(
     y += sub ? 26 : 18
   }
 
-  stat('Forecasted annual sales', usd(inputs.annualSales))
-  stat('Odyssey COGS', usd(inputs.cogs))
+  stat(
+    'Forecasted annual sales',
+    usd(r.sales),
+    inputs.annualCases > 0
+      ? `${inputs.annualCases.toLocaleString('en-US')} cases × ${usd(inputs.pricePerCase)}/case`
+      : undefined,
+  )
+  stat(
+    'Odyssey COGS',
+    usd(r.cogs),
+    inputs.annualCases > 0 ? `${usd(inputs.cogsPerCase)}/case` : undefined,
+  )
   stat('Gross profit', usd(r.grossProfit))
   stat(
     'Total trade spend',
     usd(r.totalTradeSpend),
-    inputs.annualSales > 0 ? `${pct(r.tradeSpendRate)} of sales` : undefined,
+    r.sales > 0 ? `${pct(r.tradeSpendRate)} of sales` : undefined,
   )
 
   // ---- Breakdown table ----
@@ -148,7 +158,7 @@ export async function buildTradeSpendDoc(
   doc.line(M, y, right, y)
   y += 16
 
-  const sales = inputs.annualSales
+  const sales = r.sales
   const row = (label: string, amount: number, detail?: string) => {
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(10)
