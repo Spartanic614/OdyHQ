@@ -13,7 +13,6 @@ import { Merchandising } from './pages/Merchandising'
 import { TradeSpend } from './pages/TradeSpend'
 import { Margin } from './pages/Margin'
 import { Credentials } from './pages/Credentials'
-import { ComingSoon } from './pages/ComingSoon'
 
 export default function App() {
   const { session, loading } = useAuth()
@@ -49,23 +48,6 @@ export default function App() {
           <Route path="trade-spend" element={<TradeSpend />} />
           <Route path="margin" element={<Margin />} />
           <Route path="credentials" element={<Credentials />} />
-          <Route
-            path="soon/promomash"
-            element={<ComingSoon title="PromoMash" blurb="Promo planning integration." />}
-          />
-          <Route
-            path="soon/dsd-map"
-            element={
-              <ComingSoon
-                title="DSD County Map"
-                blurb="County choropleth (FIPS data exists)."
-              />
-            }
-          />
-          <Route
-            path="soon/merch"
-            element={<ComingSoon title="Merch One-Pagers" blurb="Merchandising sheets." />}
-          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

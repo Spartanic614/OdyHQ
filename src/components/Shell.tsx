@@ -16,12 +16,6 @@ const NAV = [
   { to: '/credentials', label: 'Links & Logins' },
 ]
 
-const PHASE2 = [
-  { to: '/soon/promomash', label: 'PromoMash' },
-  { to: '/soon/dsd-map', label: 'DSD County Map' },
-  { to: '/soon/merch', label: 'Merch One-Pagers' },
-]
-
 export function Shell() {
   const { user, signOut } = useAuth()
   const { lastRefresh, refresh, loading } = useData()
@@ -53,25 +47,6 @@ export function Shell() {
               }
             >
               {n.label}
-            </NavLink>
-          ))}
-          <div className="px-4 pt-4 pb-1 text-[10px] uppercase tracking-wider text-muted">
-            Phase 2
-          </div>
-          {PHASE2.map((n) => (
-            <NavLink
-              key={n.to}
-              to={n.to}
-              className={({ isActive }) =>
-                `block px-4 py-1.5 text-xs border-l-2 transition-colors ${
-                  isActive
-                    ? 'border-ink-500 bg-white/5 text-muted'
-                    : 'border-transparent text-muted/60 hover:text-muted hover:bg-white/5'
-                }`
-              }
-            >
-              {n.label}
-              <span className="ml-1 text-[9px] opacity-60">soon</span>
             </NavLink>
           ))}
         </nav>
