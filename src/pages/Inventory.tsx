@@ -10,9 +10,11 @@ import {
   type RiskLevel,
 } from '../lib/inventory'
 import {
+  INVENTORY_CASES_PER_LAYER,
   INVENTORY_INCLUDE_ON_PO,
   INVENTORY_LEAD_TIME_WEEKS,
   INVENTORY_TARGET_WOS,
+  INVENTORY_UNITS_PER_CASE,
 } from '../config/methodology'
 import { EmptyState } from '../components/States'
 import { exportCsv } from '../lib/csv'
@@ -31,6 +33,7 @@ export function Inventory() {
   const [text, setText] = useState('')
   const [targetWos, setTargetWos] = useState(INVENTORY_TARGET_WOS)
   const [leadTimeWeeks, setLeadTimeWeeks] = useState(INVENTORY_LEAD_TIME_WEEKS)
+  const [casesPerLayer, setCasesPerLayer] = useState(INVENTORY_CASES_PER_LAYER)
   const [includeOnPo, setIncludeOnPo] = useState(INVENTORY_INCLUDE_ON_PO)
   const [greeting, setGreeting] = useState('Hi,')
   const [overrideMap, setOverrideMap] = useState<ColumnMap>({})
@@ -55,28 +58,35 @@ export function Inventory() {
     [parsed.detected, overrideMap],
   )
 
+  const opts = useMemo(
+    () => ({
+      targetWos,
+      includeOnPo,
+      leadTimeWeeks,
+      unitsPerCase: INVENTORY_UNITS_PER_CASE,
+      casesPerLayer,
+    }),
+    [targetWos, includeOnPo, leadTimeWeeks, casesPerLayer],
+  )
+
   const items = useMemo(() => {
     try {
-      return buildItems(parsed.rows, map, distributor, {
-        targetWos,
-        includeOnPo,
-        leadTimeWeeks,
-      })
+      return buildItems(parsed.rows, map, distributor, opts)
     } catch {
       return []
     }
-  }, [parsed.rows, map, distributor, targetWos, includeOnPo, leadTimeWeeks])
+  }, [parsed.rows, map, distributor, opts])
 
   const atRiskCount = items.filter((i) => i.risk === 'At Risk').length
   const reorderCount = items.filter((i) => i.risk === 'Reorder').length
 
   const generatedMessage = useMemo(() => {
     try {
-      return buildMessage(items, { targetWos, includeOnPo, leadTimeWeeks }, greeting)
+      return buildMessage(items, opts, greeting)
     } catch {
       return ''
     }
-  }, [items, targetWos, includeOnPo, leadTimeWeeks, greeting])
+  }, [items, opts, greeting])
   const message = editedMessage ?? generatedMessage
 
   const hasData = parsed.rows.length > 0
@@ -149,6 +159,19 @@ export function Inventory() {
             className="input w-24"
             value={targetWos}
             onChange={(e) => setTargetWos(Math.max(1, Number(e.target.value) || 1))}
+          />
+        </label>
+        <label className="text-xs text-muted flex flex-col gap-1">
+          Cases / layer
+          <input
+            type="number"
+            min={1}
+            step={1}
+            className="input w-24"
+            value={casesPerLayer}
+            onChange={(e) =>
+              setCasesPerLayer(Math.max(1, Number(e.target.value) || 1))
+            }
           />
         </label>
         <label className="text-xs text-muted flex items-center gap-2 pb-2">
@@ -271,7 +294,9 @@ export function Inventory() {
                     'On PO': i.onPo,
                     WOS: i.wos == null ? '' : i.wos.toFixed(1),
                     Risk: i.risk,
-                    'Suggested Order': i.suggestedOrder,
+                    'Need (units)': i.suggestedOrder,
+                    'Order (cases)': i.suggestedCases,
+                    'Order (layers)': i.suggestedLayers,
                   })),
                 )
               }
@@ -291,6 +316,7 @@ export function Inventory() {
                   <th className="th text-right">WOS</th>
                   <th className="th">Risk</th>
                   <th className="th text-right">Suggested Order</th>
+                  <th className="th text-right">Need (units)</th>
                 </tr>
               </thead>
               <tbody>
@@ -391,11 +417,16 @@ function ItemRow({ item }: { item: InventoryItem }) {
         </span>
       </td>
       <td className="td text-right">
-        {item.suggestedOrder > 0 ? (
-          <span className="font-semibold text-accent">{item.suggestedOrder}</span>
+        {item.suggestedLayers > 0 ? (
+          <span className="font-semibold text-accent">
+            {item.suggestedLayers} layer{item.suggestedLayers > 1 ? 's' : ''}
+          </span>
         ) : (
           <span className="text-muted">—</span>
         )}
+      </td>
+      <td className="td text-right text-muted">
+        {item.suggestedOrder > 0 ? item.suggestedOrder : '—'}
       </td>
     </tr>
   )

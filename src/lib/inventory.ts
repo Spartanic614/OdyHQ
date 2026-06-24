@@ -152,13 +152,17 @@ export interface InventoryItem {
   wos: number | null // null when AWS missing/zero
   risk: RiskLevel
   flagged: boolean // risk is At Risk or Reorder
-  suggestedOrder: number
+  suggestedOrder: number // units of demand to cover (precise need)
+  suggestedCases: number // need rounded up to whole cases
+  suggestedLayers: number // need rounded up to whole layers (buyer's order unit)
 }
 
 export interface CalcOptions {
   targetWos: number
   includeOnPo: boolean
   leadTimeWeeks: number
+  unitsPerCase: number
+  casesPerLayer: number
 }
 
 export function buildItems(
@@ -200,12 +204,17 @@ export function buildItems(
 
     // Order enough to cover demand during the lead time AND land back at
     // target WOS when it arrives: (target + leadTime) × AWS − what we have.
+    // Need is in units; buyers order in layers, so also express in cases/layers.
     let suggestedOrder = 0
     if (flagged && avgWeeklySales != null) {
       const targetUnits = (opts.targetWos + opts.leadTimeWeeks) * avgWeeklySales
       const have = (onHand ?? 0) + (opts.includeOnPo ? (onPo ?? 0) : 0)
       suggestedOrder = Math.max(0, Math.ceil(targetUnits - have))
     }
+    const unitsPerCase = opts.unitsPerCase > 0 ? opts.unitsPerCase : 1
+    const unitsPerLayer = unitsPerCase * (opts.casesPerLayer > 0 ? opts.casesPerLayer : 1)
+    const suggestedCases = suggestedOrder > 0 ? Math.ceil(suggestedOrder / unitsPerCase) : 0
+    const suggestedLayers = suggestedOrder > 0 ? Math.ceil(suggestedOrder / unitsPerLayer) : 0
 
     items.push({
       distributor,
@@ -218,6 +227,8 @@ export function buildItems(
       risk,
       flagged,
       suggestedOrder,
+      suggestedCases,
+      suggestedLayers,
     })
   }
   return items
@@ -229,9 +240,12 @@ const fmtN = (n: number | null) => (n == null ? '—' : Math.round(n).toLocaleSt
 const bulletFor = (i: InventoryItem) => {
   const name = [i.sku, i.description].filter(Boolean).join(' — ')
   const po = i.onPo != null && i.onPo > 0 ? `, ${fmtN(i.onPo)} on PO` : ''
+  const order = i.suggestedLayers > 0
+    ? `${i.suggestedLayers} layer${i.suggestedLayers > 1 ? 's' : ''} (~${fmtN(i.suggestedOrder)} units)`
+    : `${fmtN(i.suggestedOrder)} units`
   return `• ${name}: ${fmtWos(i.wos)} WOS (on hand ${fmtN(i.onHand)}, ~${fmtN(
     i.avgWeeklySales,
-  )}/wk${po}). Suggest ordering ${fmtN(i.suggestedOrder)}.`
+  )}/wk${po}). Suggest ordering ${order}.`
 }
 
 // Group a set of items by distributor into "Dist:\n• …" sections, most urgent first.
@@ -288,9 +302,13 @@ export function buildMessage(
     lead = `A few items are below our ${opts.targetWos}-week target and could use a replenishment PO:`
   }
 
+  const unitsPerLayer =
+    (opts.unitsPerCase > 0 ? opts.unitsPerCase : 1) *
+    (opts.casesPerLayer > 0 ? opts.casesPerLayer : 1)
+
   return (
     `${greeting}\n\n${lead}\n\n` +
     blocks.join('\n\n') +
-    `\n\nSuggested quantities cover the ${opts.leadTimeWeeks}-week lead time plus our target. Happy to adjust. Thank you!`
+    `\n\nQuantities are in layers (1 layer = ${opts.casesPerLayer} cases / ${fmtN(unitsPerLayer)} units) and cover the ${opts.leadTimeWeeks}-week lead time plus our target. Happy to adjust. Thank you!`
   )
 }

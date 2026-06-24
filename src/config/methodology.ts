@@ -57,6 +57,11 @@ export const INVENTORY_INCLUDE_ON_PO = false
 // before a replenishment PO can arrive — the "at risk" line.
 export const INVENTORY_LEAD_TIME_WEEKS = 3
 
+// Inventory is entered in units (singles). Buyers order in layers:
+//   1 case = 12 units (12-pack); 1 layer = 26 cases = 312 units.
+export const INVENTORY_UNITS_PER_CASE = 12
+export const INVENTORY_CASES_PER_LAYER = 26
+
 // ---- Trade spend calculator ----
 // Net margin (net profit ÷ sales) at/above this reads "Profitable";
 // between 0 and this reads "Breakeven"; below 0 reads "In the Red".
