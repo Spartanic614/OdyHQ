@@ -91,9 +91,14 @@ const int = (v: unknown): number | null => {
   return n == null ? null : Math.round(n)
 }
 function dateStr(v: unknown): string | null {
+  // Column is a strict Postgres DATE — return ISO date or null. The sheet's
+  // "Date Scheduled" sometimes holds status words ("Scheduled", "TBD"); drop them.
   if (v == null || v === '') return null
-  if (v instanceof Date) return v.toISOString().slice(0, 10)
-  return String(v).trim() || null
+  if (v instanceof Date) return Number.isNaN(v.getTime()) ? null : v.toISOString().slice(0, 10)
+  const s = String(v).trim()
+  if (!/\d/.test(s)) return null // no digit → not a date
+  const d = new Date(s)
+  return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10)
 }
 
 // ---------------- canonical SKU registry ----------------
@@ -158,16 +163,17 @@ function mapChainAuth(v: unknown): string | null {
   if (n === 'authorized' || n === 'planogram' || n === 'x') return 'Authorized'
   return 'Not Authorized'
 }
-function mapMeeting(v: unknown): string | null {
+function mapMeeting(v: unknown): string {
+  // Blank/unknown → "Not Contacted": the sheet's blank means no meeting progress
+  // yet, which is exactly the population the Not-Contacted hit list surfaces.
   const s = txt(v)
-  if (!s) return null
+  if (!s) return 'Not Contacted'
   const n = s.toLowerCase()
   if (n.includes('execut')) return 'Executed'
   if (n.includes('declin')) return 'Declined'
   if (n.includes('not') && n.includes('sched')) return 'Not Scheduled'
   if (n.includes('sched')) return 'Scheduled'
-  if (n.includes('not') && n.includes('contact')) return 'Not Contacted'
-  return null // unknown / freeform → leave blank, editable in-app
+  return 'Not Contacted'
 }
 function mapCalType(label: string): string {
   const n = label.toLowerCase()
