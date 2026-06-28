@@ -3,7 +3,6 @@ import { useAuth } from './auth/AuthProvider'
 import { DataProvider } from './data/store'
 import { Shell } from './components/Shell'
 import { Login } from './pages/Login'
-import { Overview } from './pages/Overview'
 import { AccountManagement } from './pages/AccountManagement'
 import { Distribution } from './pages/Distribution'
 import { CalendarPage } from './pages/Calendar'
@@ -38,7 +37,7 @@ export default function App() {
     <DataProvider>
       <Routes>
         <Route element={<Shell />}>
-          <Route index element={<Overview />} />
+          <Route index element={<Navigate to="/accounts" replace />} />
           <Route path="accounts" element={<AccountManagement />} />
           <Route path="distribution" element={<Distribution />} />
           <Route path="calendar" element={<CalendarPage />} />
@@ -48,7 +47,7 @@ export default function App() {
           <Route path="trade-spend" element={<TradeSpend />} />
           <Route path="margin" element={<Margin />} />
           <Route path="unfi-ar" element={<UnfiArTool />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to="/accounts" replace />} />
         </Route>
       </Routes>
     </DataProvider>

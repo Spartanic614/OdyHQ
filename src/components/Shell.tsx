@@ -4,7 +4,6 @@ import { useData } from '../data/store'
 import { ErrorBoundary } from './ErrorBoundary'
 
 const NAV = [
-  { to: '/', label: 'Overview', end: true },
   { to: '/accounts', label: 'Account Management' },
   { to: '/distribution', label: 'Distribution' },
   { to: '/inventory', label: 'Inventory' },
@@ -37,7 +36,6 @@ export function Shell() {
             <NavLink
               key={n.to}
               to={n.to}
-              end={n.end}
               className={({ isActive }) =>
                 `block px-4 py-2 text-sm border-l-2 transition-colors ${
                   isActive
