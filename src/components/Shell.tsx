@@ -14,8 +14,6 @@ const NAV = [
   { to: '/unfi-ar', label: 'UNFI AR Tool' },
   { to: '/calendar', label: 'Calendar' },
   { to: '/portfolio', label: 'Portfolio' },
-  { to: '/credentials', label: 'Links & Logins' },
-  { to: '/kehe-unfi-admin', label: 'KeHE / UNFI Admin' },
 ]
 
 export function Shell() {
