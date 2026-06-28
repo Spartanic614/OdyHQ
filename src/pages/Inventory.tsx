@@ -21,6 +21,7 @@ import { exportCsv } from '../lib/csv'
 import { theme } from '../theme'
 
 const FIELD_ORDER: FieldKey[] = [
+  'dc',
   'sku',
   'description',
   'onHand',
@@ -79,6 +80,7 @@ export function Inventory() {
 
   const atRiskCount = items.filter((i) => i.risk === 'At Risk').length
   const reorderCount = items.filter((i) => i.risk === 'Reorder').length
+  const buyers = Array.from(new Set(items.map((i) => i.buyer).filter(Boolean)))
 
   const generatedMessage = useMemo(() => {
     try {
@@ -127,7 +129,7 @@ export function Inventory() {
       {/* Controls */}
       <div className="card p-3 flex flex-wrap items-end gap-4">
         <label className="text-xs text-muted flex flex-col gap-1">
-          Distributor
+          Distributor (fallback)
           <select
             className="input"
             value={distributor}
@@ -192,6 +194,11 @@ export function Inventory() {
             <span className="text-muted">
               (≤{leadTimeWeeks}w lead / ≤{targetWos}w target)
             </span>
+            {buyers.length > 0 && (
+              <span className="text-muted border-l border-ink-700 pl-2">
+                → {buyers.join(', ')}
+              </span>
+            )}
           </div>
         )}
       </div>
@@ -208,9 +215,9 @@ export function Inventory() {
         <textarea
           className="input w-full h-40 font-mono text-xs"
           placeholder={
-            'SKU\tDescription\tOn Hand\tAvg Weekly Sales\tQty On PO\n' +
-            'ODY-001\tFocus 50mg 12pk\t120\t45\t0\n' +
-            'ODY-002\tCalm 25mg 12pk\t38\t30\t24'
+            'DC\tSKU\tDescription\tOn Hand\tAvg Weekly Sales\tQty On PO\n' +
+            'CHN\tODY-001\tFocus 50mg 12pk\t120\t45\t0\n' +
+            'CHN\tODY-002\tCalm 25mg 12pk\t38\t30\t24'
           }
           value={text}
           onChange={(e) => {
@@ -236,7 +243,7 @@ export function Inventory() {
               (auto-detected — override if any are wrong)
             </span>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
             {FIELD_ORDER.map((field) => {
               const required =
                 field === 'sku' || field === 'onHand' || field === 'avgWeeklySales'
@@ -286,6 +293,8 @@ export function Inventory() {
                 exportCsv(
                   `inventory_${distributor.toLowerCase()}`,
                   items.map((i) => ({
+                    DC: i.dc,
+                    Buyer: i.buyer,
                     Distributor: i.distributor,
                     SKU: i.sku,
                     Description: i.description,

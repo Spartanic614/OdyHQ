@@ -2,8 +2,10 @@
 // Inventory paste → parse → WOS calc → buyer message.
 // Pure functions; no React, no network. Used by pages/Inventory.tsx.
 // ============================================================
+import { lookupDc, firstName } from '../config/dcBuyers'
 
 export type FieldKey =
+  | 'dc'
   | 'sku'
   | 'description'
   | 'onHand'
@@ -12,6 +14,7 @@ export type FieldKey =
 
 // The fields we try to detect, in display order.
 export const FIELD_LABELS: Record<FieldKey, string> = {
+  dc: 'DC',
   sku: 'SKU / Item',
   description: 'Description',
   onHand: 'On Hand',
@@ -21,6 +24,10 @@ export const FIELD_LABELS: Record<FieldKey, string> = {
 
 // Header aliases (compared after normalization). Order matters: first match wins.
 const ALIASES: Record<FieldKey, string[]> = {
+  dc: [
+    'dc', 'dc_code', 'dccode', 'dc_id', 'distribution_center', 'distributioncenter',
+    'warehouse', 'whse', 'wh', 'facility', 'site', 'branch', 'dc_name',
+  ],
   sku: [
     'sku', 'sku_code', 'item', 'item_number', 'item_no', 'item_code', 'item_id',
     'product', 'product_code', 'upc', 'kehe', 'kehe_number', 'unfi', 'unfi_number',
@@ -144,6 +151,8 @@ export type RiskLevel = 'At Risk' | 'Reorder' | 'OK' | 'No Sales'
 
 export interface InventoryItem {
   distributor: string
+  dc: string // DC code from the leftmost column (upper-cased)
+  buyer: string // resolved buyer first name ('' if DC not in reference)
   sku: string
   description: string
   onHand: number | null
@@ -178,6 +187,7 @@ export function buildItems(
 
   const items: InventoryItem[] = []
   for (const row of rows) {
+    const dc = (get(row, 'dc') ?? '').trim().toUpperCase()
     const sku = (get(row, 'sku') ?? '').trim()
     const description = (get(row, 'description') ?? '').trim()
     const onHand = parseNumber(get(row, 'onHand'))
@@ -186,6 +196,12 @@ export function buildItems(
 
     // Skip fully empty rows.
     if (!sku && onHand == null && avgWeeklySales == null) continue
+
+    // Resolve the DC → owning buyer + distributor. The DC mapping wins over the
+    // dropdown default; unmapped DCs fall back to it with no buyer name.
+    const ref = lookupDc(dc)
+    const rowDistributor = ref?.distributor ?? distributor
+    const buyer = ref ? firstName(ref.buyer) : ''
 
     let wos: number | null = null
     if (avgWeeklySales != null && avgWeeklySales > 0) {
@@ -217,7 +233,9 @@ export function buildItems(
     const suggestedLayers = suggestedOrder > 0 ? Math.ceil(suggestedOrder / unitsPerLayer) : 0
 
     items.push({
-      distributor,
+      distributor: rowDistributor,
+      dc,
+      buyer,
       sku,
       description,
       onHand,
@@ -248,47 +266,46 @@ const bulletFor = (i: InventoryItem) => {
   )}/wk${po}). Suggest ordering ${order}.`
 }
 
-// Group a set of items by distributor into "Dist:\n• …" sections, most urgent first.
-const sectionsByDist = (items: InventoryItem[]) => {
-  const byDist = new Map<string, InventoryItem[]>()
+// Section label for a DC: "City (Distributor)" when known, else the raw code.
+const dcLabel = (item: InventoryItem) => {
+  const ref = lookupDc(item.dc)
+  if (ref) return `${ref.city} (${ref.distributor})`
+  return item.dc || item.distributor || 'Items'
+}
+
+// Group a set of items into "DC:\n• …" sections, most urgent first.
+const sectionsByDc = (items: InventoryItem[]) => {
+  const byDc = new Map<string, { label: string; list: InventoryItem[] }>()
   for (const it of items) {
-    const list = byDist.get(it.distributor) ?? []
-    list.push(it)
-    byDist.set(it.distributor, list)
+    const key = it.dc || it.distributor || 'items'
+    const entry = byDc.get(key) ?? { label: dcLabel(it), list: [] }
+    entry.list.push(it)
+    byDc.set(key, entry)
   }
   const out: string[] = []
-  for (const [dist, list] of byDist) {
+  for (const { label, list } of byDc.values()) {
     list.sort((a, b) => (a.wos ?? 0) - (b.wos ?? 0))
-    out.push(`${dist}:\n${list.map(bulletFor).join('\n')}`)
+    out.push(`${label}:\n${list.map(bulletFor).join('\n')}`)
   }
   return out
 }
 
-// Build the copyable buyer message — lead-time aware, at-risk items first.
-export function buildMessage(
-  items: InventoryItem[],
-  opts: CalcOptions,
-  greeting = 'Hi,',
-): string {
-  const actionable = items.filter((i) => i.flagged && i.suggestedOrder > 0)
-  if (actionable.length === 0) {
-    return `${greeting}\n\nInventory looks healthy — every SKU has more than ${opts.targetWos} weeks of supply, comfortably above our ${opts.leadTimeWeeks}-week replenishment lead time. Thank you!`
-  }
-
-  const atRisk = actionable.filter((i) => i.risk === 'At Risk')
-  const reorder = actionable.filter((i) => i.risk === 'Reorder')
+// Body of one buyer's email: lead-in + AT RISK / REORDER sections + closing.
+function buyerBody(items: InventoryItem[], opts: CalcOptions): string {
+  const atRisk = items.filter((i) => i.risk === 'At Risk')
+  const reorder = items.filter((i) => i.risk === 'Reorder')
 
   const blocks: string[] = []
   if (atRisk.length) {
     blocks.push(
       `AT RISK — projected to stock out before a new PO can arrive (${opts.leadTimeWeeks}-week lead time):\n\n` +
-        sectionsByDist(atRisk).join('\n\n'),
+        sectionsByDc(atRisk).join('\n\n'),
     )
   }
   if (reorder.length) {
     blocks.push(
       `REORDER — below our ${opts.targetWos}-week target; ordering now keeps us ahead:\n\n` +
-        sectionsByDist(reorder).join('\n\n'),
+        sectionsByDc(reorder).join('\n\n'),
     )
   }
 
@@ -307,8 +324,40 @@ export function buildMessage(
     (opts.casesPerLayer > 0 ? opts.casesPerLayer : 1)
 
   return (
-    `${greeting}\n\n${lead}\n\n` +
+    `${lead}\n\n` +
     blocks.join('\n\n') +
     `\n\nQuantities are in layers (1 layer = ${opts.casesPerLayer} cases / ${fmtN(unitsPerLayer)} units) and cover the ${opts.leadTimeWeeks}-week lead time plus our target. Happy to adjust. Thank you!`
   )
+}
+
+// Build the copyable buyer message(s). Items are grouped by their resolved
+// buyer (via the DC reference) and each buyer is greeted by first name. When
+// a paste spans multiple buyers, one email per buyer is produced. Rows whose
+// DC isn't in the reference fall back to the manual greeting.
+export function buildMessage(
+  items: InventoryItem[],
+  opts: CalcOptions,
+  greeting = 'Hi,',
+): string {
+  const actionable = items.filter((i) => i.flagged && i.suggestedOrder > 0)
+  if (actionable.length === 0) {
+    return `${greeting}\n\nInventory looks healthy — every SKU has more than ${opts.targetWos} weeks of supply, comfortably above our ${opts.leadTimeWeeks}-week replenishment lead time. Thank you!`
+  }
+
+  // Group by buyer first name; '' = unresolved DC (uses the manual greeting).
+  const byBuyer = new Map<string, InventoryItem[]>()
+  for (const it of actionable) {
+    const key = it.buyer || ''
+    const list = byBuyer.get(key) ?? []
+    list.push(it)
+    byBuyer.set(key, list)
+  }
+
+  const emails: string[] = []
+  for (const [buyer, list] of byBuyer) {
+    const greet = buyer ? `Hi ${buyer},` : greeting
+    emails.push(`${greet}\n\n${buyerBody(list, opts)}`)
+  }
+  // Multiple buyers → separate emails, clearly delimited.
+  return emails.join('\n\n' + '—'.repeat(20) + '\n\n')
 }
