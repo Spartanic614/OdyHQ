@@ -12,6 +12,7 @@ import { Merchandising } from './pages/Merchandising'
 import { TradeSpend } from './pages/TradeSpend'
 import { Margin } from './pages/Margin'
 import { UnfiArTool } from './pages/UnfiArTool'
+import { Vlookup } from './pages/Vlookup'
 
 export default function App() {
   const { session, loading } = useAuth()
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="trade-spend" element={<TradeSpend />} />
           <Route path="margin" element={<Margin />} />
           <Route path="unfi-ar" element={<UnfiArTool />} />
+          <Route path="vlookup" element={<Vlookup />} />
           <Route path="*" element={<Navigate to="/accounts" replace />} />
         </Route>
       </Routes>
