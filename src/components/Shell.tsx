@@ -6,6 +6,7 @@ import { ErrorBoundary } from './ErrorBoundary'
 const NAV = [
   { to: '/accounts', label: 'Account Management' },
   { to: '/distribution', label: 'Distribution' },
+  { to: '/dsd-coverage', label: 'DSD Coverage' },
   { to: '/inventory', label: 'Inventory' },
   { to: '/merchandising', label: 'Merchandising' },
   { to: '/trade-spend', label: 'Trade Spend' },

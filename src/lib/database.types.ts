@@ -45,6 +45,36 @@ export type Database = {
         }
         Relationships: []
       }
+      ref_dsd_coverage: {
+        Row: {
+          county: string | null
+          county_state: string | null
+          county_type: string | null
+          distributor: string | null
+          fips: string | null
+          id: number
+          state: string | null
+        }
+        Insert: {
+          county?: string | null
+          county_state?: string | null
+          county_type?: string | null
+          distributor?: string | null
+          fips?: string | null
+          id?: never
+          state?: string | null
+        }
+        Update: {
+          county?: string | null
+          county_state?: string | null
+          county_type?: string | null
+          distributor?: string | null
+          fips?: string | null
+          id?: never
+          state?: string | null
+        }
+        Relationships: []
+      }
       bridge_dc_anchor: {
         Row: {
           anchor_chain_id: string | null

@@ -5,6 +5,7 @@ import { Shell } from './components/Shell'
 import { Login } from './pages/Login'
 import { AccountManagement } from './pages/AccountManagement'
 import { Distribution } from './pages/Distribution'
+import { DsdCoverage } from './pages/DsdCoverage'
 import { CalendarPage } from './pages/Calendar'
 import { Portfolio } from './pages/Portfolio'
 import { Inventory } from './pages/Inventory'
@@ -41,6 +42,7 @@ export default function App() {
           <Route index element={<Navigate to="/accounts" replace />} />
           <Route path="accounts" element={<AccountManagement />} />
           <Route path="distribution" element={<Distribution />} />
+          <Route path="dsd-coverage" element={<DsdCoverage />} />
           <Route path="calendar" element={<CalendarPage />} />
           <Route path="portfolio" element={<Portfolio />} />
           <Route path="inventory" element={<Inventory />} />

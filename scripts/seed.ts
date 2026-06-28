@@ -458,6 +458,29 @@ function buildCalendar(wb: XLSX.WorkBook) {
   return out
 }
 
+function buildDsdCoverage(wb: XLSX.WorkBook) {
+  // County → DSD distributor coverage. Blank distributor = whitespace (no DSD).
+  const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(
+    wb.Sheets['DSD County Coverage'],
+    { defval: null },
+  )
+  const out: Record<string, unknown>[] = []
+  for (const r of raw) {
+    const state = txt(r['Official Name State'])
+    const county = txt(r['Official Name County'])
+    if (!state && !county) continue
+    out.push({
+      state,
+      county,
+      county_type: txt(r['Type']),
+      distributor: txt(r['Distributor']), // null = uncovered (whitespace)
+      fips: txt(r['County FIPS Code']),
+      county_state: txt(r['County + State']),
+    })
+  }
+  return out
+}
+
 // ============================================================
 //  Load orchestration
 // ============================================================
@@ -484,6 +507,7 @@ async function main() {
   const { dcs, dcAuth, anchors } = buildDistribution(wb)
   const { chains, reviews, chainAuth } = buildAccounts(wb)
   const calendar = buildCalendar(wb)
+  const dsdCoverage = buildDsdCoverage(wb)
 
   // Resolve anchor names → chain_id where a chain matches.
   const chainIds = new Set(chains.map((c) => c.chain_id as string))
@@ -510,6 +534,8 @@ async function main() {
     console.log(`  fact_category_review   ${reviews.length}  (${reviewsWithProgress} with a meeting_progress)`)
     console.log(`  bridge_dc_anchor       ${anchors.length}  (${anchorsResolved} resolved to a chain_id)`)
     console.log(`  fact_calendar          ${calendar.length}`)
+    const covered = dsdCoverage.filter((d) => d.distributor != null).length
+    console.log(`  ref_dsd_coverage       ${dsdCoverage.length}  (${covered} covered / ${dsdCoverage.length - covered} whitespace)`)
     const calTypes = new Set(calendar.map((c) => c.event_type))
     const dcAuthNot = dcAuthClean.filter((r) => r.auth_status === 'Not Authorized').length
     console.log(`\n  calendar event types:  ${[...calTypes].join(', ')}`)
@@ -527,6 +553,7 @@ async function main() {
   await clearAll('dim_chain', 'chain_id')
   await clearAll('dim_dc', 'dc_code')
   await clearAll('dim_sku', 'sku_code')
+  await clearAll('ref_dsd_coverage', 'id')
 
   console.log('\nInserting (FK order)…')
   await insertAll('dim_sku', skus)
@@ -537,6 +564,7 @@ async function main() {
   await insertAll('fact_category_review', reviews)
   await insertAll('bridge_dc_anchor', anchors)
   await insertAll('fact_calendar', calendar)
+  await insertAll('ref_dsd_coverage', dsdCoverage)
 
   console.log('\nDone.')
 }
