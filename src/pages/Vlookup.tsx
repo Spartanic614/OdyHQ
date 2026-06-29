@@ -5,6 +5,7 @@ import {
   vlookup,
   type Table,
   type MatchStatus,
+  type VlookupResult,
 } from '../lib/vlookup'
 import { EmptyState } from '../components/States'
 import { exportCsv } from '../lib/csv'
@@ -49,14 +50,17 @@ export function Vlookup() {
     return set2.headers.map((_, i) => i).filter((i) => i !== bKey)
   }, [returnOverride, set2.headers, bKey])
 
-  const result = useMemo(() => {
-    if (!ready) return null
+  // Computed on demand when the user hits "Run VLOOKUP" (not reactive).
+  const [result, setResult] = useState<VlookupResult | null>(null)
+
+  const runVlookup = () => {
+    if (!ready) return
     try {
-      return vlookup(set1, set2, aKey, bKey, returnCols)
+      setResult(vlookup(set1, set2, aKey, bKey, returnCols))
     } catch {
-      return null
+      setResult(null)
     }
-  }, [ready, set1, set2, aKey, bKey, returnCols])
+  }
 
   const sortedRows = useMemo(
     () =>
@@ -150,17 +154,30 @@ export function Vlookup() {
         </div>
       )}
 
-      {!ready ? (
-        <EmptyState message="Paste both data sets above (each with a header row) to match them." />
+      {/* Giant Run button */}
+      <button
+        className="btn btn-accent w-full text-lg font-bold py-4 disabled:opacity-40"
+        onClick={runVlookup}
+        disabled={!ready}
+      >
+        ▶ Run VLOOKUP
+      </button>
+
+      {result ? (
+        <Results
+          desc={desc}
+          result={result}
+          sortedRows={sortedRows}
+          overlap={suggested.overlap}
+        />
       ) : (
-        result && (
-          <Results
-            desc={desc}
-            result={result}
-            sortedRows={sortedRows}
-            overlap={suggested.overlap}
-          />
-        )
+        <EmptyState
+          message={
+            ready
+              ? 'Hit “Run VLOOKUP” to match the two data sets.'
+              : 'Paste both data sets above (each with a header row), then hit Run VLOOKUP.'
+          }
+        />
       )}
     </div>
   )

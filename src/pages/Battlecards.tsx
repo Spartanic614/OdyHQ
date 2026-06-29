@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useData } from '../data/store'
 import { useChainPriorities } from '../data/hooks'
 import { Pill } from '../components/StatusBadge'
+import { SelectFilter, uniqueValues } from '../components/Filters'
 import { TableSkeleton, ErrorBanner, EmptyState } from '../components/States'
 import { fmtInt, fmtUsd } from '../lib/format'
 import { tierColors, theme } from '../theme'
@@ -14,6 +15,7 @@ export function Battlecards() {
 
   const [chainId, setChainId] = useState<string>('')
   const [search, setSearch] = useState('')
+  const [am, setAm] = useState('')
   const [exporting, setExporting] = useState(false)
 
   // Default to the highest-priority chain once data loads.
@@ -66,9 +68,10 @@ export function Battlecards() {
   const matches = useMemo(() => {
     const q = search.trim().toLowerCase()
     return priorities
+      .filter((p) => !am || p.chain.account_manager === am)
       .filter((p) => !q || (p.chain.chain_name ?? p.chain.chain_id).toLowerCase().includes(q))
       .slice(0, 60)
-  }, [priorities, search])
+  }, [priorities, search, am])
 
   const exportPdf = async () => {
     if (!chain) return
@@ -130,6 +133,12 @@ export function Battlecards() {
       <div className="grid gap-4 lg:grid-cols-[260px_1fr]">
         {/* Chain picker */}
         <div className="card p-2 space-y-2 h-fit">
+          <SelectFilter
+            label="Account Manager"
+            value={am}
+            onChange={setAm}
+            options={uniqueValues(chains.rows, (c) => c.account_manager)}
+          />
           <input
             className="input w-full"
             placeholder="Search accounts…"
