@@ -5,6 +5,7 @@ import { ErrorBoundary } from './ErrorBoundary'
 
 const NAV = [
   { to: '/accounts', label: 'Account Management' },
+  { to: '/battlecards', label: 'Battlecards' },
   { to: '/distribution', label: 'Distribution' },
   { to: '/dsd-coverage', label: 'DSD Coverage' },
   { to: '/inventory', label: 'Inventory' },

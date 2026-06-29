@@ -4,6 +4,7 @@ import { DataProvider } from './data/store'
 import { Shell } from './components/Shell'
 import { Login } from './pages/Login'
 import { AccountManagement } from './pages/AccountManagement'
+import { Battlecards } from './pages/Battlecards'
 import { Distribution } from './pages/Distribution'
 import { DsdCoverage } from './pages/DsdCoverage'
 import { CalendarPage } from './pages/Calendar'
@@ -41,6 +42,7 @@ export default function App() {
         <Route element={<Shell />}>
           <Route index element={<Navigate to="/accounts" replace />} />
           <Route path="accounts" element={<AccountManagement />} />
+          <Route path="battlecards" element={<Battlecards />} />
           <Route path="distribution" element={<Distribution />} />
           <Route path="dsd-coverage" element={<DsdCoverage />} />
           <Route path="calendar" element={<CalendarPage />} />
