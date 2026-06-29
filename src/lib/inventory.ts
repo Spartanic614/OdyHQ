@@ -3,6 +3,7 @@
 // Pure functions; no React, no network. Used by pages/Inventory.tsx.
 // ============================================================
 import { lookupDc, firstName } from '../config/dcBuyers'
+import { isExcludedSku } from '../config/skuTracking'
 
 export type FieldKey =
   | 'dc'
@@ -153,6 +154,7 @@ export interface InventoryItem {
   distributor: string
   dc: string // DC code from the leftmost column (upper-cased)
   buyer: string // resolved buyer first name ('' if DC not in reference)
+  excluded: boolean // SKU is on the distributor's exclude list — skip in analysis
   sku: string
   description: string
   onHand: number | null
@@ -202,6 +204,7 @@ export function buildItems(
     const ref = lookupDc(dc)
     const rowDistributor = ref?.distributor ?? distributor
     const buyer = ref ? firstName(ref.buyer) : ''
+    const excluded = isExcludedSku(rowDistributor, description, sku)
 
     let wos: number | null = null
     if (avgWeeklySales != null && avgWeeklySales > 0) {
@@ -236,6 +239,7 @@ export function buildItems(
       distributor: rowDistributor,
       dc,
       buyer,
+      excluded,
       sku,
       description,
       onHand,
@@ -339,7 +343,7 @@ export function buildMessage(
   opts: CalcOptions,
   greeting = 'Hi,',
 ): string {
-  const actionable = items.filter((i) => i.flagged && i.suggestedOrder > 0)
+  const actionable = items.filter((i) => !i.excluded && i.flagged && i.suggestedOrder > 0)
   if (actionable.length === 0) {
     return `${greeting}\n\nInventory looks healthy — every SKU has more than ${opts.targetWos} weeks of supply, comfortably above our ${opts.leadTimeWeeks}-week replenishment lead time. Thank you!`
   }

@@ -19,6 +19,7 @@ import {
 import { EmptyState } from '../components/States'
 import { exportCsv } from '../lib/csv'
 import { theme } from '../theme'
+import { SKU_TRACKING } from '../config/skuTracking'
 
 const FIELD_ORDER: FieldKey[] = [
   'dc',
@@ -40,6 +41,7 @@ export function Inventory() {
   const [overrideMap, setOverrideMap] = useState<ColumnMap>({})
   const [editedMessage, setEditedMessage] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [showSkuLists, setShowSkuLists] = useState(false)
 
   // Parse defensively — malformed paste should show a message, never crash.
   const { parsed, parseError } = useMemo(() => {
@@ -78,17 +80,21 @@ export function Inventory() {
     }
   }, [parsed.rows, map, distributor, opts])
 
-  const atRiskCount = items.filter((i) => i.risk === 'At Risk').length
-  const reorderCount = items.filter((i) => i.risk === 'Reorder').length
-  const buyers = Array.from(new Set(items.map((i) => i.buyer).filter(Boolean)))
+  // Excluded SKUs (per the distributor tracking lists) are dropped from analysis.
+  const analyzed = useMemo(() => items.filter((i) => !i.excluded), [items])
+  const excludedCount = items.length - analyzed.length
+
+  const atRiskCount = analyzed.filter((i) => i.risk === 'At Risk').length
+  const reorderCount = analyzed.filter((i) => i.risk === 'Reorder').length
+  const buyers = Array.from(new Set(analyzed.map((i) => i.buyer).filter(Boolean)))
 
   const generatedMessage = useMemo(() => {
     try {
-      return buildMessage(items, opts, greeting)
+      return buildMessage(analyzed, opts, greeting)
     } catch {
       return ''
     }
-  }, [items, opts, greeting])
+  }, [analyzed, opts, greeting])
   const message = editedMessage ?? generatedMessage
 
   const hasData = parsed.rows.length > 0
@@ -124,7 +130,16 @@ export function Inventory() {
             and get a copyable reorder message.
           </p>
         </div>
+        <button
+          className="btn text-xs"
+          onClick={() => setShowSkuLists((s) => !s)}
+          title="SKUs tracked vs excluded, by distributor"
+        >
+          {showSkuLists ? 'Hide' : 'Show'} SKU tracking lists
+        </button>
       </div>
+
+      {showSkuLists && <SkuTrackingPanel />}
 
       {/* Controls */}
       <div className="card p-3 flex flex-wrap items-end gap-4">
@@ -194,6 +209,11 @@ export function Inventory() {
             <span className="text-muted">
               (≤{leadTimeWeeks}w lead / ≤{targetWos}w target)
             </span>
+            {excludedCount > 0 && (
+              <span className="text-muted" title="Excluded per the distributor SKU tracking list">
+                · {excludedCount} excluded
+              </span>
+            )}
             {buyers.length > 0 && (
               <span className="text-muted border-l border-ink-700 pl-2">
                 → {buyers.join(', ')}
@@ -292,7 +312,7 @@ export function Inventory() {
               onClick={() =>
                 exportCsv(
                   `inventory_${distributor.toLowerCase()}`,
-                  items.map((i) => ({
+                  analyzed.map((i) => ({
                     DC: i.dc,
                     Buyer: i.buyer,
                     Distributor: i.distributor,
@@ -329,7 +349,7 @@ export function Inventory() {
                 </tr>
               </thead>
               <tbody>
-                {[...items]
+                {[...analyzed]
                   .sort(
                     (a, b) =>
                       RISK_RANK[a.risk] - RISK_RANK[b.risk] ||
@@ -386,6 +406,62 @@ export function Inventory() {
       {!hasData && (
         <EmptyState message="Paste inventory rows above to get started." />
       )}
+    </div>
+  )
+}
+
+// Read-only view of the editable SKU tracking lists (src/config/skuTracking.ts).
+function SkuTrackingPanel() {
+  return (
+    <div className="card p-3 space-y-3">
+      <div className="text-sm font-semibold">
+        SKU tracking lists
+        <span className="text-muted font-normal">
+          {' '}
+          — edit in <code className="text-text">src/config/skuTracking.ts</code> to
+          add/remove SKUs (excluded SKUs are dropped from every analysis)
+        </span>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {(Object.keys(SKU_TRACKING) as (keyof typeof SKU_TRACKING)[]).map((dist) => {
+          const list = SKU_TRACKING[dist]
+          const tracked = list.filter((s) => s.track)
+          const excluded = list.filter((s) => !s.track)
+          return (
+            <div key={dist} className="space-y-2">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted">
+                {dist}
+              </div>
+              <div>
+                <div className="text-[11px] mb-1" style={{ color: theme.good }}>
+                  Tracked ({tracked.length})
+                </div>
+                <div className="space-y-0.5">
+                  {tracked.map((s) => (
+                    <div key={s.name} className="text-xs font-mono flex items-center gap-1.5">
+                      <span style={{ color: theme.good }}>✓</span>
+                      {s.name}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="text-[11px] mb-1" style={{ color: theme.bad }}>
+                  Excluded ({excluded.length})
+                </div>
+                <div className="space-y-0.5">
+                  {excluded.map((s) => (
+                    <div key={s.name} className="text-xs font-mono flex items-center gap-1.5 text-muted">
+                      <span style={{ color: theme.bad }}>✗</span>
+                      {s.name}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
