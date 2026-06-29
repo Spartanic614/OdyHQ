@@ -148,7 +148,7 @@ export function parsePaste(text: string): ParseResult {
 //   Reorder  — lead time < WOS ≤ target: below target, order now to stay ahead
 //   OK       — WOS > target
 //   No Sales — AWS missing/zero, can't compute
-export type RiskLevel = 'At Risk' | 'Reorder' | 'OK' | 'No Sales'
+export type RiskLevel = 'At Risk' | 'Reorder' | 'OK' | 'On PO' | 'No Sales'
 
 export interface InventoryItem {
   distributor: string
@@ -171,6 +171,8 @@ export interface InventoryItem {
 export interface CalcOptions {
   targetWos: number
   includeOnPo: boolean
+  /** When true, items with any qty on PO are not flagged (replenishment inbound). */
+  excludeOnPo: boolean
   leadTimeWeeks: number
   unitsPerCase: number
   casesPerLayer: number
@@ -218,6 +220,12 @@ export function buildItems(
     else if (wos <= opts.leadTimeWeeks) risk = 'At Risk'
     else if (wos <= opts.targetWos) risk = 'Reorder'
     else risk = 'OK'
+
+    // Anything already on a PO has replenishment inbound — don't flag it; you
+    // only want low-WOS items with nothing on order.
+    if (opts.excludeOnPo && (onPo ?? 0) > 0 && (risk === 'At Risk' || risk === 'Reorder')) {
+      risk = 'On PO'
+    }
 
     const flagged = risk === 'At Risk' || risk === 'Reorder'
 

@@ -53,6 +53,11 @@ export const INVENTORY_TARGET_WOS = 4
 // suggested order quantity (avoids double-ordering). Default off.
 export const INVENTORY_INCLUDE_ON_PO = false
 
+// When true, items with ANY quantity on PO are not flagged (At Risk / Reorder)
+// — replenishment is already inbound, so you only see low-WOS items with
+// nothing on order.
+export const INVENTORY_EXCLUDE_ON_PO = true
+
 // PO-to-warehouse lead time (weeks). Items with WOS at/under this stock out
 // before a replenishment PO can arrive — the "at risk" line.
 export const INVENTORY_LEAD_TIME_WEEKS = 3

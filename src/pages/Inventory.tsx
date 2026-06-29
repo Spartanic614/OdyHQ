@@ -12,6 +12,7 @@ import {
 import {
   INVENTORY_CASES_PER_LAYER,
   INVENTORY_INCLUDE_ON_PO,
+  INVENTORY_EXCLUDE_ON_PO,
   INVENTORY_LEAD_TIME_WEEKS,
   INVENTORY_TARGET_WOS,
   INVENTORY_UNITS_PER_CASE,
@@ -38,6 +39,7 @@ export function Inventory() {
   const [leadTimeWeeks, setLeadTimeWeeks] = useState(INVENTORY_LEAD_TIME_WEEKS)
   const [casesPerLayer, setCasesPerLayer] = useState(INVENTORY_CASES_PER_LAYER)
   const [includeOnPo, setIncludeOnPo] = useState(INVENTORY_INCLUDE_ON_PO)
+  const [excludeOnPo, setExcludeOnPo] = useState(INVENTORY_EXCLUDE_ON_PO)
   const [greeting, setGreeting] = useState('Hi,')
   const [overrideMap, setOverrideMap] = useState<ColumnMap>({})
   const [editedMessage, setEditedMessage] = useState<string | null>(null)
@@ -67,11 +69,12 @@ export function Inventory() {
     () => ({
       targetWos,
       includeOnPo,
+      excludeOnPo,
       leadTimeWeeks,
       unitsPerCase: INVENTORY_UNITS_PER_CASE,
       casesPerLayer,
     }),
-    [targetWos, includeOnPo, leadTimeWeeks, casesPerLayer],
+    [targetWos, includeOnPo, excludeOnPo, leadTimeWeeks, casesPerLayer],
   )
 
   const items = useMemo(() => {
@@ -208,6 +211,14 @@ export function Inventory() {
               setCasesPerLayer(Math.max(1, Number(e.target.value) || 1))
             }
           />
+        </label>
+        <label className="text-xs text-muted flex items-center gap-2 pb-2">
+          <input
+            type="checkbox"
+            checked={excludeOnPo}
+            onChange={(e) => setExcludeOnPo(e.target.checked)}
+          />
+          Ignore items with anything on PO
         </label>
         <label className="text-xs text-muted flex items-center gap-2 pb-2">
           <input
@@ -566,13 +577,15 @@ const RISK_RANK: Record<RiskLevel, number> = {
   'At Risk': 0,
   Reorder: 1,
   OK: 2,
-  'No Sales': 3,
+  'On PO': 3,
+  'No Sales': 4,
 }
 
 const RISK_STYLE: Record<RiskLevel, { color: string; rowBg: string; icon: string }> = {
   'At Risk': { color: theme.bad, rowBg: 'bg-bad/10', icon: '⚠' },
   Reorder: { color: theme.warn, rowBg: 'bg-warn/5', icon: '↻' },
   OK: { color: theme.good, rowBg: '', icon: '✓' },
+  'On PO': { color: '#9db4c9', rowBg: '', icon: '↧' },
   'No Sales': { color: theme.textMuted, rowBg: '', icon: '–' },
 }
 
