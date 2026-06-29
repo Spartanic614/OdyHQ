@@ -20,6 +20,7 @@ import { EmptyState } from '../components/States'
 import { exportCsv } from '../lib/csv'
 import { theme } from '../theme'
 import { SKU_TRACKING } from '../config/skuTracking'
+import { lookupDc } from '../config/dcBuyers'
 
 const FIELD_ORDER: FieldKey[] = [
   'dc',
@@ -42,6 +43,7 @@ export function Inventory() {
   const [editedMessage, setEditedMessage] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [showSkuLists, setShowSkuLists] = useState(false)
+  const [ran, setRan] = useState(false)
 
   // Parse defensively — malformed paste should show a message, never crash.
   const { parsed, parseError } = useMemo(() => {
@@ -87,6 +89,22 @@ export function Inventory() {
   const atRiskCount = analyzed.filter((i) => i.risk === 'At Risk').length
   const reorderCount = analyzed.filter((i) => i.risk === 'Reorder').length
   const buyers = Array.from(new Set(analyzed.map((i) => i.buyer).filter(Boolean)))
+
+  // At-Risk SKUs grouped by DC, for the summary box above the buyer message.
+  const atRiskByDc = useMemo(() => {
+    const m = new Map<string, InventoryItem[]>()
+    for (const i of analyzed) {
+      if (i.risk !== 'At Risk') continue
+      const key = i.dc || i.distributor || '—'
+      const arr = m.get(key) ?? []
+      arr.push(i)
+      m.set(key, arr)
+    }
+    return [...m.entries()].map(([dc, list]) => ({
+      dc,
+      list: [...list].sort((a, b) => (a.wos ?? 0) - (b.wos ?? 0)),
+    }))
+  }, [analyzed])
 
   const generatedMessage = useMemo(() => {
     try {
@@ -243,6 +261,7 @@ export function Inventory() {
           onChange={(e) => {
             setText(e.target.value)
             setEditedMessage(null)
+            setRan(false)
           }}
         />
         {parseError && (
@@ -302,8 +321,19 @@ export function Inventory() {
         </div>
       )}
 
+      {/* Big run button */}
+      {hasData && (
+        <button
+          className="btn btn-accent w-full text-lg font-bold py-4 disabled:opacity-40"
+          onClick={() => setRan(true)}
+          disabled={missingRequired}
+        >
+          {ran ? '↻ Re-run Inventory Analysis' : '▶ Run Inventory Analysis'}
+        </button>
+      )}
+
       {/* Results */}
-      {hasData && !missingRequired && (
+      {ran && hasData && !missingRequired && (
         <div className="card overflow-hidden">
           <div className="flex items-center justify-between p-2 border-b border-ink-700">
             <div className="text-sm font-semibold">3. Computed WOS</div>
@@ -364,8 +394,65 @@ export function Inventory() {
         </div>
       )}
 
+      {/* At-Risk summary by DC */}
+      {ran && hasData && !missingRequired && (
+        <div className="card p-3 space-y-3" style={{ borderColor: `${theme.bad}55` }}>
+          <div className="text-sm font-semibold flex items-center gap-2">
+            <span style={{ color: theme.bad }} aria-hidden>
+              ⚠
+            </span>
+            At-Risk SKUs by DC
+            <span className="text-muted font-normal">
+              — stock out before a {leadTimeWeeks}-week PO can land
+            </span>
+          </div>
+          {atRiskByDc.length === 0 ? (
+            <div className="text-sm text-muted">No SKUs at risk. 🎉</div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {atRiskByDc.map(({ dc, list }) => {
+                const ref = lookupDc(dc)
+                const label = ref ? `${ref.city} (${ref.distributor})` : dc || 'Items'
+                const buyer = list[0]?.buyer
+                return (
+                  <div
+                    key={dc}
+                    className="rounded p-2 bg-bad/5"
+                    style={{ border: `1px solid ${theme.bad}40` }}
+                  >
+                    <div className="text-xs font-semibold flex items-center justify-between gap-2">
+                      <span className="truncate">{label}</span>
+                      <span style={{ color: theme.bad }}>{list.length} at risk</span>
+                    </div>
+                    {buyer && (
+                      <div className="text-[11px] text-muted mb-1">Buyer: {buyer}</div>
+                    )}
+                    <div className="space-y-1 pt-1">
+                      {list.map((i, idx) => (
+                        <div
+                          key={`${i.sku}-${idx}`}
+                          className="text-xs flex items-center justify-between gap-2"
+                        >
+                          <span className="truncate">{i.sku || i.description || '—'}</span>
+                          <span
+                            className="font-semibold tabular-nums shrink-0"
+                            style={{ color: theme.bad }}
+                          >
+                            {i.wos == null ? '—' : i.wos.toFixed(1)} WOS
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Message */}
-      {hasData && !missingRequired && (
+      {ran && hasData && !missingRequired && (
         <div className="card p-3 space-y-2">
           <div className="flex items-center justify-between">
             <div className="text-sm font-semibold">4. Message to buyer</div>
