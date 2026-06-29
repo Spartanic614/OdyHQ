@@ -5,6 +5,7 @@ import type { Tables } from '../lib/database.types'
 import { DataTable, type Column } from '../components/DataTable'
 import { SelectFilter, uniqueValues } from '../components/Filters'
 import { TableSkeleton, ErrorBanner, EmptyState } from '../components/States'
+import { CoverageCompare } from '../components/CoverageCompare'
 import { fmtInt, fmtPct } from '../lib/format'
 import { theme } from '../theme'
 
@@ -39,6 +40,7 @@ export function DsdCoverage() {
 
   const rows = useMemo(() => data ?? [], [data])
 
+  const [tab, setTab] = useState<'coverage' | 'compare'>('coverage')
   const [state, setState] = useState('')
   const [distributor, setDistributor] = useState('')
   const [coverage, setCoverage] = useState<CoverageFilter>('all')
@@ -108,22 +110,53 @@ export function DsdCoverage() {
     { key: 'fips', label: 'FIPS', value: (r) => r.fips },
   ]
 
-  if (loading) return <TableSkeleton />
-  if (error) return <ErrorBanner table={TABLE} message={error} onRetry={refetch} />
-  if (!rows.length)
-    return <EmptyState message="No DSD coverage data loaded yet — run the seed." />
+  const loadedDsd = useMemo(
+    () =>
+      rows.map((r) => ({
+        county: r.county,
+        state: r.state,
+        fips: r.fips,
+        distributor: r.distributor,
+      })),
+    [rows],
+  )
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold">DSD Coverage &amp; Whitespace</h1>
-        <p className="text-sm text-muted">
-          County-level DSD coverage. &quot;Whitespace&quot; counties have no
-          distributor assigned — open territory for expansion.
-        </p>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h1 className="text-xl font-semibold">DSD Coverage &amp; Whitespace</h1>
+          <p className="text-sm text-muted">
+            County-level DSD coverage, plus a retailer-vs-distributor comparison map.
+          </p>
+        </div>
+        <div className="flex gap-1">
+          <button
+            className={`btn text-sm ${tab === 'coverage' ? 'btn-accent' : ''}`}
+            onClick={() => setTab('coverage')}
+          >
+            Coverage
+          </button>
+          <button
+            className={`btn text-sm ${tab === 'compare' ? 'btn-accent' : ''}`}
+            onClick={() => setTab('compare')}
+          >
+            Comparison Map
+          </button>
+        </div>
       </div>
 
-      {/* KPIs */}
+      {tab === 'compare' ? (
+        <CoverageCompare loadedDsd={loadedDsd} />
+      ) : loading ? (
+        <TableSkeleton />
+      ) : error ? (
+        <ErrorBanner table={TABLE} message={error} onRetry={refetch} />
+      ) : !rows.length ? (
+        <EmptyState message="No DSD coverage data loaded yet — run the seed." />
+      ) : (
+        <>
+          {/* KPIs */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
         <Kpi label="Counties covered" value={fmtInt(kpis.covered)} color={theme.good} />
         <Kpi label="Whitespace counties" value={fmtInt(kpis.whitespace)} color={theme.bad} />
@@ -197,6 +230,8 @@ export function DsdCoverage() {
           </div>
         }
       />
+        </>
+      )}
     </div>
   )
 }
