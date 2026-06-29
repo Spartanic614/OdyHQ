@@ -321,16 +321,25 @@ export function Inventory() {
         </div>
       )}
 
-      {/* Big run button */}
-      {hasData && (
-        <button
-          className="btn btn-accent w-full text-lg font-bold py-4 disabled:opacity-40"
-          onClick={() => setRan(true)}
-          disabled={missingRequired}
-        >
-          {ran ? '↻ Re-run Inventory Analysis' : '▶ Run Inventory Analysis'}
-        </button>
-      )}
+      {/* Big run button — always visible, disabled until data is ready */}
+      <button
+        className="btn btn-accent w-full text-lg font-bold py-4 disabled:opacity-40"
+        onClick={() => setRan(true)}
+        disabled={!hasData || missingRequired}
+        title={
+          !hasData
+            ? 'Paste inventory data above first'
+            : missingRequired
+              ? 'Map SKU, On Hand, and Avg Weekly Sales'
+              : undefined
+        }
+      >
+        {!hasData
+          ? '▶ Run Inventory Analysis (paste data above)'
+          : ran
+            ? '↻ Re-run Inventory Analysis'
+            : '▶ Run Inventory Analysis'}
+      </button>
 
       {/* Results */}
       {ran && hasData && !missingRequired && (
