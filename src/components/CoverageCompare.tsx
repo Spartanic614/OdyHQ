@@ -15,7 +15,6 @@ import { fmtInt } from '../lib/format'
 import { theme } from '../theme'
 
 const RETAIL_FIELDS: Field[] = ['fips', 'county', 'state', 'outlets']
-const DIST_FIELDS: Field[] = ['fips', 'county', 'state', 'distributor']
 
 export interface LoadedDsd {
   county: string | null
@@ -26,18 +25,27 @@ export interface LoadedDsd {
 
 export function CoverageCompare({ loadedDsd }: { loadedDsd?: LoadedDsd[] }) {
   const [retailText, setRetailText] = useState('')
-  const [distText, setDistText] = useState('')
   const [retailOverride, setRetailOverride] = useState<ColMap>({})
-  const [distOverride, setDistOverride] = useState<ColMap>({})
 
   const retail = useParsed(retailText, retailOverride)
-  const dist = useParsed(distText, distOverride)
 
-  const ready =
-    retail.table.rows.length > 0 &&
-    dist.table.rows.length > 0 &&
-    dist.map.fips != null &&
-    (retail.map.fips != null || (retail.map.county != null && retail.map.state != null))
+  // Distributor side = your CURRENT loaded DSD coverage (no paste needed).
+  const dist = useMemo(() => {
+    const rows = (loadedDsd ?? []).map((r) => [
+      r.fips ?? '',
+      r.county ?? '',
+      r.state ?? '',
+      r.distributor ?? '',
+    ])
+    return {
+      table: { headers: ['FIPS', 'County', 'State', 'Distributor'], rows } as Table,
+      map: { fips: 0, county: 1, state: 2, distributor: 3 } as ColMap,
+    }
+  }, [loadedDsd])
+
+  const retailKeyed =
+    retail.map.fips != null || (retail.map.county != null && retail.map.state != null)
+  const ready = retail.table.rows.length > 0 && dist.table.rows.length > 0 && retailKeyed
 
   const result = useMemo(() => {
     if (!ready) return null
@@ -48,68 +56,39 @@ export function CoverageCompare({ loadedDsd }: { loadedDsd?: LoadedDsd[] }) {
     }
   }, [ready, retail.table, retail.map, dist.table, dist.map])
 
-  const loadDsd = () => {
-    if (!loadedDsd?.length) return
-    const lines = ['FIPS\tCounty\tState\tDistributor']
-    for (const r of loadedDsd) {
-      lines.push(`${r.fips ?? ''}\t${r.county ?? ''}\t${r.state ?? ''}\t${r.distributor ?? ''}`)
-    }
-    setDistText(lines.join('\n'))
-    setDistOverride({})
-  }
-
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted">
-        Paste your retailer outlet list and a distributor county-coverage list.
-        The map shows where retailer demand overlaps DSD coverage (
-        <span style={{ color: theme.good }}>served</span>) vs. where you have
-        outlets but no coverage (<span style={{ color: theme.bad }}>gap</span>).
-        Joined on county FIPS (resolved from county + state when needed).
+        Paste your retailer outlets below. The map shows your{' '}
+        <span style={{ color: theme.good }}>current DSD coverage</span> and flags
+        the counties where you have outlets but{' '}
+        <span style={{ color: theme.bad }}>no coverage</span> — the ones you&apos;d
+        need a new DSD for. Compared against{' '}
+        {loadedDsd?.length ? `${fmtInt(loadedDsd.length)} loaded counties` : 'your loaded DSD data'}.
       </p>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <PastePanel
-          step="1"
-          title="Retailer outlets"
-          fields={RETAIL_FIELDS}
-          placeholder={'County\tState\tStores\nMaricopa\tAZ\t14\nHarris\tTX\t9'}
-          text={retailText}
-          onText={(v) => {
-            setRetailText(v)
-            setRetailOverride({})
-          }}
-          parsed={retail}
-          onSetCol={(f, i) => setRetailOverride((m) => ({ ...m, [f]: i }))}
-        />
-        <PastePanel
-          step="2"
-          title="Distributor county coverage"
-          fields={DIST_FIELDS}
-          placeholder={'FIPS\tCounty\tState\tDistributor\n04013\tMaricopa\tAZ\tSavannah Dist'}
-          text={distText}
-          onText={(v) => {
-            setDistText(v)
-            setDistOverride({})
-          }}
-          parsed={dist}
-          onSetCol={(f, i) => setDistOverride((m) => ({ ...m, [f]: i }))}
-          extra={
-            loadedDsd?.length ? (
-              <button className="btn text-xs" onClick={loadDsd}>
-                ↧ Use loaded DSD data ({fmtInt(loadedDsd.length)} counties)
-              </button>
-            ) : null
-          }
-        />
-      </div>
+      <PastePanel
+        step="1"
+        title="Retailer outlets"
+        fields={RETAIL_FIELDS}
+        placeholder={'County\tState\tStores\nMaricopa\tAZ\t14\nHarris\tTX\t9'}
+        text={retailText}
+        onText={(v) => {
+          setRetailText(v)
+          setRetailOverride({})
+        }}
+        parsed={retail}
+        onSetCol={(f, i) => setRetailOverride((m) => ({ ...m, [f]: i }))}
+      />
 
       {!ready ? (
         <EmptyState
           message={
-            !retailText.trim() || !distText.trim()
-              ? 'Paste both lists above to compare coverage.'
-              : 'Map the key columns: distributor needs FIPS; retailer needs FIPS or County + State.'
+            !dist.table.rows.length
+              ? 'DSD coverage still loading…'
+              : !retailText.trim()
+                ? 'Paste your retailer outlets above to see what counties you’re missing.'
+                : 'Map the County + State (or FIPS) column on your retailer data.'
           }
         />
       ) : (
