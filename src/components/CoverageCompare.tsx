@@ -200,13 +200,40 @@ function PastePanel({
 }
 
 function Results({ result }: { result: NonNullable<ReturnType<typeof compareCoverage>> }) {
-  const { counts, gaps, statusByFips } = result
+  const { counts, gaps, served, statusByFips } = result
+  const [servedColor, setServedColor] = useState<string>(theme.good)
+  const [gapColor, setGapColor] = useState<string>(theme.bad)
+  const [coverageColor, setCoverageColor] = useState<string>('#39414f')
+
+  const fillByFips = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const [fips, status] of statusByFips) {
+      m.set(fips, status === 'served' ? servedColor : status === 'gap' ? gapColor : coverageColor)
+    }
+    return m
+  }, [statusByFips, servedColor, gapColor, coverageColor])
+
+  const tooltipByFips = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const g of gaps) m.set(g.fips, `Needs a DSD · ${fmtInt(g.outlets)} outlets`)
+    for (const s of served) m.set(s.fips, `Served · ${fmtInt(s.outlets)} outlets`)
+    for (const [fips, status] of statusByFips)
+      if (status === 'coverageOnly' && !m.has(fips)) m.set(fips, 'DSD coverage (no outlets)')
+    return m
+  }, [gaps, served, statusByFips])
+
+  const legend = [
+    { label: 'Served (outlets + DSD)', color: servedColor },
+    { label: 'Needs a DSD (outlets, no coverage)', color: gapColor },
+    { label: 'DSD coverage only', color: coverageColor },
+  ]
+
   return (
     <div className="space-y-4">
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <Kpi label="Counties served" value={fmtInt(counts.servedCounties)} color={theme.good} />
-        <Kpi label="Gap counties" value={fmtInt(counts.gapCounties)} color={theme.bad} />
-        <Kpi label="Outlets in gap counties" value={fmtInt(counts.outletsGap)} color={theme.bad} />
+        <Kpi label="Counties needing a DSD" value={fmtInt(counts.gapCounties)} color={theme.bad} />
+        <Kpi label="Outlets with no DSD" value={fmtInt(counts.outletsGap)} color={theme.bad} />
         <Kpi label="Outlets served" value={fmtInt(counts.outletsServed)} color={theme.good} />
       </div>
       {counts.unresolved > 0 && (
@@ -216,15 +243,25 @@ function Results({ result }: { result: NonNullable<ReturnType<typeof compareCove
         </div>
       )}
 
-      <div className="card p-3">
-        <CoverageMap statusByFips={statusByFips} exportName="coverage_comparison_map" />
+      <div className="card p-3 space-y-3">
+        <div className="flex flex-wrap items-center gap-4">
+          <ColorPick label="Served" value={servedColor} onChange={setServedColor} />
+          <ColorPick label="Needs a DSD" value={gapColor} onChange={setGapColor} />
+          <ColorPick label="Coverage only" value={coverageColor} onChange={setCoverageColor} />
+        </div>
+        <CoverageMap
+          fillByFips={fillByFips}
+          tooltipByFips={tooltipByFips}
+          legend={legend}
+          exportName="coverage_comparison_map"
+        />
       </div>
 
       <div className="card overflow-hidden">
         <div className="flex items-center justify-between p-2 border-b border-ink-700">
           <div className="text-sm font-semibold">
-            Gap counties
-            <span className="text-muted font-normal"> — outlets with no DSD coverage</span>
+            Counties needing a new DSD
+            <span className="text-muted font-normal"> — retailer outlets with no coverage</span>
           </div>
           <button
             className="btn text-xs"
@@ -285,5 +322,27 @@ function Kpi({ label, value, color }: { label: string; value: string; color?: st
       </div>
       <div className="text-xs text-muted">{label}</div>
     </div>
+  )
+}
+
+export function ColorPick({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <label className="text-xs text-muted flex items-center gap-1.5">
+      <input
+        type="color"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-6 h-6 rounded cursor-pointer bg-transparent"
+      />
+      {label}
+    </label>
   )
 }

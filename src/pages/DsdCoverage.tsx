@@ -5,7 +5,8 @@ import type { Tables } from '../lib/database.types'
 import { DataTable, type Column } from '../components/DataTable'
 import { SelectFilter, uniqueValues } from '../components/Filters'
 import { TableSkeleton, ErrorBanner, EmptyState } from '../components/States'
-import { CoverageCompare } from '../components/CoverageCompare'
+import { CoverageCompare, ColorPick } from '../components/CoverageCompare'
+import { CoverageMap } from '../components/CoverageMap'
 import { fmtInt, fmtPct } from '../lib/format'
 import { theme } from '../theme'
 
@@ -44,6 +45,8 @@ export function DsdCoverage() {
   const [state, setState] = useState('')
   const [distributor, setDistributor] = useState('')
   const [coverage, setCoverage] = useState<CoverageFilter>('all')
+  const [coveredColor, setCoveredColor] = useState<string>(theme.good)
+  const [whitespaceColor, setWhitespaceColor] = useState<string>('#39414f')
 
   const isCovered = (r: Row) => !!(r.distributor && r.distributor.trim())
 
@@ -75,6 +78,23 @@ export function DsdCoverage() {
     return [...m.entries()]
       .map(([s, v]) => ({ state: s, ...v, pct: v.total ? v.covered / v.total : 0 }))
       .sort((a, b) => b.covered - a.covered || b.total - a.total)
+  }, [rows])
+
+  // County fills + hover tooltips for the interactive coverage map.
+  const mapFill = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const r of rows) {
+      if (r.fips) m.set(r.fips, isCovered(r) ? coveredColor : whitespaceColor)
+    }
+    return m
+  }, [rows, coveredColor, whitespaceColor])
+
+  const mapTooltip = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const r of rows) {
+      if (r.fips) m.set(r.fips, isCovered(r) ? (r.distributor as string) : 'No DSD — whitespace')
+    }
+    return m
   }, [rows])
 
   const filtered = useMemo(
@@ -163,6 +183,29 @@ export function DsdCoverage() {
         <Kpi label="Coverage" value={fmtPct(kpis.coveragePct)} />
         <Kpi label="DSD distributors" value={fmtInt(kpis.distributors)} />
         <Kpi label="States" value={fmtInt(kpis.states)} />
+      </div>
+
+      {/* Interactive coverage map */}
+      <div className="card p-3 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="text-sm font-semibold">
+            DSD coverage map
+            <span className="text-muted font-normal"> — hover a county for its distributor</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <ColorPick label="Covered" value={coveredColor} onChange={setCoveredColor} />
+            <ColorPick label="Whitespace" value={whitespaceColor} onChange={setWhitespaceColor} />
+          </div>
+        </div>
+        <CoverageMap
+          fillByFips={mapFill}
+          tooltipByFips={mapTooltip}
+          legend={[
+            { label: 'DSD coverage', color: coveredColor },
+            { label: 'Whitespace (no DSD)', color: whitespaceColor },
+          ]}
+          exportName="dsd_coverage_map"
+        />
       </div>
 
       {/* Coverage by state */}
