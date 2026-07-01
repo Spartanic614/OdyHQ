@@ -80,14 +80,17 @@ export function DsdCoverage() {
       .sort((a, b) => b.covered - a.covered || b.total - a.total)
   }, [rows])
 
-  // County fills + hover tooltips for the interactive coverage map.
+  // County fills + hover tooltips for the interactive coverage map. When a DSD
+  // is selected, only that distributor's counties are highlighted (others dim).
   const mapFill = useMemo(() => {
     const m = new Map<string, string>()
     for (const r of rows) {
-      if (r.fips) m.set(r.fips, isCovered(r) ? coveredColor : whitespaceColor)
+      if (!r.fips) continue
+      const on = distributor ? r.distributor === distributor : isCovered(r)
+      m.set(r.fips, on ? coveredColor : whitespaceColor)
     }
     return m
-  }, [rows, coveredColor, whitespaceColor])
+  }, [rows, coveredColor, whitespaceColor, distributor])
 
   const mapTooltip = useMemo(() => {
     const m = new Map<string, string>()
@@ -190,20 +193,40 @@ export function DsdCoverage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="text-sm font-semibold">
             DSD coverage map
-            <span className="text-muted font-normal"> — hover a county for its distributor</span>
+            {distributor ? (
+              <span className="text-muted font-normal">
+                {' — '}
+                {distributor}: {fmtInt(rows.filter((r) => r.distributor === distributor && r.fips).length)} counties
+              </span>
+            ) : (
+              <span className="text-muted font-normal"> — pick a DSD to see its territory</span>
+            )}
           </div>
-          <div className="flex items-center gap-4">
-            <ColorPick label="Covered" value={coveredColor} onChange={setCoveredColor} />
-            <ColorPick label="Whitespace" value={whitespaceColor} onChange={setWhitespaceColor} />
+          <div className="flex flex-wrap items-center gap-4">
+            <SelectFilter
+              label="Highlight DSD"
+              value={distributor}
+              onChange={setDistributor}
+              options={uniqueValues(rows, (r) => r.distributor)}
+            />
+            <ColorPick label={distributor ? 'Territory' : 'Covered'} value={coveredColor} onChange={setCoveredColor} />
+            <ColorPick label="Other" value={whitespaceColor} onChange={setWhitespaceColor} />
           </div>
         </div>
         <CoverageMap
           fillByFips={mapFill}
           tooltipByFips={mapTooltip}
-          legend={[
-            { label: 'DSD coverage', color: coveredColor },
-            { label: 'Whitespace (no DSD)', color: whitespaceColor },
-          ]}
+          legend={
+            distributor
+              ? [
+                  { label: `${distributor} territory`, color: coveredColor },
+                  { label: 'Other / whitespace', color: whitespaceColor },
+                ]
+              : [
+                  { label: 'DSD coverage', color: coveredColor },
+                  { label: 'Whitespace (no DSD)', color: whitespaceColor },
+                ]
+          }
           exportName="dsd_coverage_map"
         />
       </div>
