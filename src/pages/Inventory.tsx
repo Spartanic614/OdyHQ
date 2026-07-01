@@ -374,8 +374,9 @@ export function Inventory() {
                     WOS: i.wos == null ? '' : i.wos.toFixed(1),
                     Risk: i.risk,
                     'Need (units)': i.suggestedOrder,
-                    'Order (cases)': i.suggestedCases,
                     'Order (layers)': i.suggestedLayers,
+                    'Order (cases)': i.suggestedCases,
+                    'Order (units)': i.orderUnits,
                   })),
                 )
               }
@@ -614,6 +615,10 @@ function ItemRow({ item }: { item: InventoryItem }) {
         {item.suggestedLayers > 0 ? (
           <span className="font-semibold text-accent">
             {item.suggestedLayers} layer{item.suggestedLayers > 1 ? 's' : ''}
+            <span className="text-muted font-normal">
+              {' '}
+              ({item.suggestedCases} cs / {item.orderUnits.toLocaleString('en-US')} u)
+            </span>
           </span>
         ) : (
           <span className="text-muted">—</span>

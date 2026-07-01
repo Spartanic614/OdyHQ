@@ -163,9 +163,10 @@ export interface InventoryItem {
   wos: number | null // null when AWS missing/zero
   risk: RiskLevel
   flagged: boolean // risk is At Risk or Reorder
-  suggestedOrder: number // units of demand to cover (precise need)
-  suggestedCases: number // need rounded up to whole cases
-  suggestedLayers: number // need rounded up to whole layers (buyer's order unit)
+  suggestedOrder: number // raw units of demand to cover (precise need)
+  suggestedLayers: number // need rounded UP to whole layers (buyer's order unit)
+  suggestedCases: number // = suggestedLayers × casesPerLayer (reconciled)
+  orderUnits: number // = suggestedLayers × unitsPerLayer (actual units ordered)
 }
 
 export interface CalcOptions {
@@ -239,9 +240,13 @@ export function buildItems(
       suggestedOrder = Math.max(0, Math.ceil(targetUnits - have))
     }
     const unitsPerCase = opts.unitsPerCase > 0 ? opts.unitsPerCase : 1
-    const unitsPerLayer = unitsPerCase * (opts.casesPerLayer > 0 ? opts.casesPerLayer : 1)
-    const suggestedCases = suggestedOrder > 0 ? Math.ceil(suggestedOrder / unitsPerCase) : 0
+    const casesPerLayer = opts.casesPerLayer > 0 ? opts.casesPerLayer : 1
+    const unitsPerLayer = unitsPerCase * casesPerLayer
+    // Buyers order whole layers, so round demand UP to layers, then derive
+    // cases and units from that so all three reconcile (1 layer = 26 cases = 312 u).
     const suggestedLayers = suggestedOrder > 0 ? Math.ceil(suggestedOrder / unitsPerLayer) : 0
+    const suggestedCases = suggestedLayers * casesPerLayer
+    const orderUnits = suggestedLayers * unitsPerLayer
 
     items.push({
       distributor: rowDistributor,
@@ -257,8 +262,9 @@ export function buildItems(
       risk,
       flagged,
       suggestedOrder,
-      suggestedCases,
       suggestedLayers,
+      suggestedCases,
+      orderUnits,
     })
   }
   return items
@@ -271,8 +277,8 @@ const bulletFor = (i: InventoryItem) => {
   const name = [i.sku, i.description].filter(Boolean).join(' — ')
   const po = i.onPo != null && i.onPo > 0 ? `, ${fmtN(i.onPo)} on PO` : ''
   const order = i.suggestedLayers > 0
-    ? `${i.suggestedLayers} layer${i.suggestedLayers > 1 ? 's' : ''} (~${fmtN(i.suggestedOrder)} units)`
-    : `${fmtN(i.suggestedOrder)} units`
+    ? `${i.suggestedLayers} layer${i.suggestedLayers > 1 ? 's' : ''} (${fmtN(i.suggestedCases)} cases / ${fmtN(i.orderUnits)} units)`
+    : `${fmtN(i.orderUnits)} units`
   return `• ${name}: ${fmtWos(i.wos)} WOS (on hand ${fmtN(i.onHand)}, ~${fmtN(
     i.avgWeeklySales,
   )}/wk${po}). Suggest ordering ${order}.`
