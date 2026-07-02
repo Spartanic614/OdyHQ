@@ -329,6 +329,30 @@ export function profitTotals(rows: RetailerProfit[]): ProfitTotals {
   return { ...t, roi: t.merchCost > 0 ? t.netProfit / t.merchCost : null }
 }
 
+// ---- Timeframe of the pasted data (from visit dates) ----
+export interface DateRange {
+  start: Date | null
+  end: Date | null
+  days: number // inclusive span
+  dated: number // visits with a parseable date
+  total: number
+}
+
+export function dateRange(visits: StoreVisit[]): DateRange {
+  const times: number[] = []
+  for (const v of visits) {
+    const t = new Date(v.visitDate).getTime()
+    if (!Number.isNaN(t)) times.push(t)
+  }
+  if (!times.length) {
+    return { start: null, end: null, days: 0, dated: 0, total: visits.length }
+  }
+  const start = new Date(Math.min(...times))
+  const end = new Date(Math.max(...times))
+  const days = Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1
+  return { start, end, days, dated: times.length, total: visits.length }
+}
+
 // Convenience for tests / direct use.
 export function analyze(text: string) {
   const table = parseTable(text)

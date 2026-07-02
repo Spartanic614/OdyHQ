@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { parseTable } from '../lib/parseTable'
 import {
   buildVisits,
+  dateRange,
   detectMerchColumns,
   MERCH_FIELD_LABELS,
   MERCH_REQUIRED,
@@ -35,6 +36,8 @@ const FIELD_ORDER: MerchField[] = [
 
 const roiPct = (roi: number | null) => (roi == null ? '—' : `${(roi * 100).toFixed(0)}%`)
 const signColor = (n: number) => (n >= 0 ? theme.good : theme.bad)
+const fmtRangeDate = (d: Date) =>
+  d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
 const packColor = (p: string) =>
   p === 'Shelf Full'
@@ -61,6 +64,7 @@ export function Merchandising() {
   const map = useMemo<MerchColumnMap>(() => ({ ...detected, ...overrideMap }), [detected, overrideMap])
 
   const visits = useMemo(() => buildVisits(table, map), [table, map])
+  const range = useMemo(() => dateRange(visits), [visits])
   const summary = useMemo(() => summarize(visits), [visits])
   const profit = useMemo(() => retailerProfit(visits, econ), [visits, econ])
   const totals = useMemo(() => profitTotals(profit), [profit])
@@ -181,6 +185,25 @@ export function Merchandising() {
       {/* Results */}
       {hasData && !missingRequired && (
         <>
+          {/* Timeframe of the pasted data */}
+          <div className="card p-3 flex flex-wrap items-center justify-between gap-2 border-l-2 border-accent">
+            <div className="text-sm">
+              <span className="text-muted">Timeframe of pasted data: </span>
+              {range.start && range.end ? (
+                <span className="font-semibold">
+                  {fmtRangeDate(range.start)} – {fmtRangeDate(range.end)}
+                  <span className="text-muted font-normal"> · {fmtInt(range.days)} days</span>
+                </span>
+              ) : (
+                <span className="text-warn font-semibold">no visit dates detected</span>
+              )}
+            </div>
+            <div className="text-xs text-muted">
+              {fmtInt(range.total)} store visits
+              {range.dated < range.total ? ` · ${fmtInt(range.total - range.dated)} without a date` : ''}
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             <KpiCard label="Stores Visited" value={fmtInt(summary.visits)} />
             <KpiCard label="In System" value={fmtPct(summary.authRate)} sub={`${fmtInt(summary.notAuthorized)} not auth`} />
