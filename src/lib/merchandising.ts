@@ -66,6 +66,7 @@ export interface StoreVisit {
   visitDate: string
   authorized: boolean
   packOut: string
+  casesPacked: number // units/cases the merchandiser recorded filling (0 if none)
   display: Display
   notes: string
 }
@@ -145,6 +146,9 @@ export function buildVisits(table: ParsedTable, map: MerchColumnMap): StoreVisit
     const packResp = responseFor(rows, /pack ?out|did you pack/i)
     const displayResp = responseFor(rows, /secondary display|display of odyssey/i)
     const issueResp = responseFor(rows, /issue with product|stock level|pricing|describe any/i)
+    // Cases/units the merchandiser recorded filling (only when authorized).
+    const packNum = packResp.match(/\d+/)
+    const casesPacked = authorized && packNum ? parseInt(packNum[0], 10) : 0
 
     visits.push({
       key,
@@ -157,6 +161,7 @@ export function buildVisits(table: ParsedTable, map: MerchColumnMap): StoreVisit
       visitDate: firstOf(rows, 'visitDate') || firstOf(rows, 'weekStart'),
       authorized,
       packOut: classifyPackOut(packResp, authorized),
+      casesPacked,
       display: displayResp ? classifyDisplay(displayResp) : '—',
       notes: NOISE_RE.test(issueResp) ? '' : issueResp,
     })
@@ -232,6 +237,96 @@ export function byChain(visits: StoreVisit[]): ChainRollup[] {
       }
     })
     .sort((a, b) => b.visits - a.visits)
+}
+
+// ---- Retailer-level profitability (ROI of the merch program) ----
+// Value = incremental cases (cases packed out + displays built × cases/display)
+// × margin per case. Cost = store visits × cost per visit. Net = value − cost.
+export interface MerchEconomics {
+  costPerVisit: number // what you pay the merch team per store visit
+  marginPerCase: number // Odyssey profit per incremental case
+  casesPerDisplay: number // incremental cases credited to each display built
+}
+
+export const DEFAULT_MERCH_ECON: MerchEconomics = {
+  costPerVisit: 0,
+  marginPerCase: 0,
+  casesPerDisplay: 0,
+}
+
+export interface RetailerProfit {
+  retailer: string
+  visits: number
+  authorized: number
+  authRate: number
+  casesPacked: number
+  displays: number
+  incrementalCases: number
+  merchCost: number
+  incrementalProfit: number
+  netProfit: number
+  roi: number | null // net ÷ cost
+}
+
+export function retailerProfit(
+  visits: StoreVisit[],
+  econ: MerchEconomics,
+): RetailerProfit[] {
+  const m = new Map<string, StoreVisit[]>()
+  for (const v of visits) {
+    const c = v.chain || v.masterChain || '—'
+    const list = m.get(c) ?? []
+    list.push(v)
+    m.set(c, list)
+  }
+  const out: RetailerProfit[] = []
+  for (const [retailer, list] of m) {
+    const authorized = list.filter((v) => v.authorized).length
+    const casesPacked = list.reduce((s, v) => s + v.casesPacked, 0)
+    const displays = list.filter((v) => v.display === 'Display Up').length
+    const incrementalCases = casesPacked + displays * econ.casesPerDisplay
+    const merchCost = list.length * econ.costPerVisit
+    const incrementalProfit = incrementalCases * econ.marginPerCase
+    const netProfit = incrementalProfit - merchCost
+    out.push({
+      retailer,
+      visits: list.length,
+      authorized,
+      authRate: list.length ? authorized / list.length : 0,
+      casesPacked,
+      displays,
+      incrementalCases,
+      merchCost,
+      incrementalProfit,
+      netProfit,
+      roi: merchCost > 0 ? netProfit / merchCost : null,
+    })
+  }
+  return out.sort((a, b) => b.netProfit - a.netProfit)
+}
+
+export interface ProfitTotals {
+  visits: number
+  merchCost: number
+  incrementalCases: number
+  incrementalProfit: number
+  netProfit: number
+  roi: number | null
+}
+
+export function profitTotals(rows: RetailerProfit[]): ProfitTotals {
+  const t = rows.reduce(
+    (a, r) => {
+      a.visits += r.visits
+      a.merchCost += r.merchCost
+      a.incrementalCases += r.incrementalCases
+      a.incrementalProfit += r.incrementalProfit
+      a.netProfit += r.netProfit
+      return a
+    },
+    { visits: 0, merchCost: 0, incrementalCases: 0, incrementalProfit: 0, netProfit: 0 },
+  )
+  return { ...t, roi: t.merchCost > 0 ? t.netProfit / t.merchCost : null }
 }
 
 // Convenience for tests / direct use.
