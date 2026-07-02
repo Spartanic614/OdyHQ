@@ -12,7 +12,6 @@ const NAV = [
   { to: '/merchandising', label: 'Merchandising' },
   { to: '/trade-spend', label: 'Trade Spend' },
   { to: '/margin', label: 'Margin' },
-  { to: '/unfi-ar', label: 'UNFI AR Tool' },
   { to: '/vlookup', label: 'VLOOKUP / Match' },
   { to: '/calendar', label: 'Calendar' },
   { to: '/portfolio', label: 'Portfolio' },

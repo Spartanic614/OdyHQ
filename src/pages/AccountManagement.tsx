@@ -205,6 +205,9 @@ function Tracker({ onPick }: { onPick: (id: string) => void }) {
 function HitList({ onPick }: { onPick: (id: string) => void }) {
   const hits = useHitList()
   const { loading, chains, prospects } = useData()
+  const [am, setAm] = useState('')
+
+  const filtered = useMemo(() => hits.filter((h) => !am || h.owner === am), [hits, am])
 
   const columns: Column<HitListRow>[] = [
     {
@@ -232,12 +235,20 @@ function HitList({ onPick }: { onPick: (id: string) => void }) {
   return (
     <DataTable
       columns={columns}
-      rows={hits}
+      rows={filtered}
       rowKey={(h) => h.id}
       onRowClick={(h) => h.kind === 'chain' && onPick(h.id)}
       exportName="not_contacted_hit_list"
       initialSort={{ key: 'size', dir: 'desc' }}
       searchPlaceholder="Search accounts…"
+      toolbar={
+        <SelectFilter
+          label="AM"
+          value={am}
+          onChange={setAm}
+          options={uniqueValues(hits, (h) => h.owner)}
+        />
+      }
     />
   )
 }
