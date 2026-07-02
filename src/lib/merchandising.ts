@@ -1,171 +1,243 @@
 // ============================================================
-// Merchandising ROI model. Return is driven by corrections the 3rd-party
-// merch company makes per touch (out-of-stocks + voids corrected),
-// valued at Odyssey's per-case margin; cost is touches × cost per touch.
-// Pure functions; inputs supplied by the page.
+// Merchandising field-execution analysis.
+// Raw data is long-format: one row per store-visit *question*, with the answer
+// in "Response". We group rows into store visits and classify execution:
+//   - Authorized (in system) vs Not Authorized / Not in System
+//   - Pack-out / shelf status (Shelf Full, Out of Stock, Packed N)
+//   - Secondary display (Display Up, Not Up, Refused)
+// Pure functions; no React. Used by pages/Merchandising.tsx.
 // ============================================================
-import { detectColumns, parseNumber, type ParsedTable } from './parseTable'
+import { parseTable, detectColumns, type ParsedTable } from './parseTable'
 
 export type MerchField =
-  | 'retailer'
-  | 'distributor'
-  | 'oosCorrected'
-  | 'voidsCorrected'
-  | 'touches'
+  | 'storeInfo'
+  | 'storeId'
+  | 'chain'
+  | 'masterChain'
+  | 'question'
+  | 'response'
+  | 'visitDate'
+  | 'weekStart'
+  | 'survey'
 
 export const MERCH_FIELD_LABELS: Record<MerchField, string> = {
-  retailer: 'Retailer / Account',
-  distributor: 'Distributor',
-  oosCorrected: 'Out-of-Stocks Corrected',
-  voidsCorrected: 'Voids Corrected',
-  touches: 'Touches / Visits',
+  storeInfo: 'Store Info',
+  storeId: 'Store ID',
+  chain: 'Chain',
+  masterChain: 'Master Chain',
+  question: 'Question',
+  response: 'Response',
+  visitDate: 'Visit Date',
+  weekStart: 'Week Start',
+  survey: 'Survey Name',
 }
 
-export const MERCH_REQUIRED: MerchField[] = [
-  'retailer',
-  'oosCorrected',
-  'voidsCorrected',
-  'touches',
-]
+// Question + Response are the minimum; a store identifier is also needed.
+export const MERCH_REQUIRED: MerchField[] = ['question', 'response']
 
 const ALIASES: Record<MerchField, string[]> = {
-  retailer: [
-    'retailer', 'account', 'account_name', 'retailer_name', 'chain', 'banner',
-    'customer', 'store_group', 'name',
-  ],
-  distributor: ['distributor', 'dist', 'wholesaler', 'rtm', 'kehe_unfi', 'source'],
-  oosCorrected: [
-    'oos_corrected', 'out_of_stocks_corrected', 'out_of_stock_corrected',
-    'oos_fixed', 'oos', 'out_of_stocks', 'outs_corrected', 'oos_count',
-    'stock_corrections', 'oos_resolved',
-  ],
-  voidsCorrected: [
-    'voids_corrected', 'void_corrected', 'voids_fixed', 'voids', 'void',
-    'voids_resolved', 'void_count', 'distribution_voids', 'voids_filled',
-  ],
-  touches: [
-    'touches', 'touch', 'visits', 'visit', 'service_calls', 'calls',
-    'store_visits', 'stops', 'service_visits', 'number_of_touches', 'touch_count',
-  ],
-}
-
-export function detectMerchColumns(table: ParsedTable) {
-  return detectColumns<MerchField>(table.headers, ALIASES)
+  storeInfo: ['store_info', 'store', 'store_name', 'location', 'store_address'],
+  storeId: ['store_id', 'storeid', 'store_number', 'store_no', 'store_num', 'tdlinx', 'account_id'],
+  chain: ['chain', 'banner', 'account', 'retailer'],
+  masterChain: ['master_chain', 'masterchain', 'parent_chain', 'master', 'parent'],
+  question: ['question', 'survey_question', 'q'],
+  response: ['response', 'answer', 'result', 'value', 'reply'],
+  visitDate: ['visit_date', 'visited', 'date_visited', 'visitdate', 'date'],
+  weekStart: ['week_start_date', 'week_start', 'weekstart', 'week'],
+  survey: ['survey_name', 'survey', 'project', 'program', 'campaign'],
 }
 
 export type MerchColumnMap = Partial<Record<MerchField, number>>
 
-export interface MerchInputs {
-  cogsPerCase: number // Odyssey cost of goods, per case
-  sellPerCase: number // price to KeHE/UNFI, per case
-  costPerTouch: number // 3rd-party merch cost per touch
-  casesPerOos: number // cases recovered per out-of-stock corrected
-  casesPerVoid: number // cases gained per void corrected
+export function detectMerchColumns(table: ParsedTable): MerchColumnMap {
+  return detectColumns<MerchField>(table.headers, ALIASES)
 }
 
-export const DEFAULT_MERCH_INPUTS: MerchInputs = {
-  cogsPerCase: 0,
-  sellPerCase: 0,
-  costPerTouch: 0,
-  casesPerOos: 1,
-  casesPerVoid: 1,
+export type Display = 'Display Up' | 'Not Up' | 'Refused' | '—'
+
+export interface StoreVisit {
+  key: string
+  store: string
+  address: string
+  storeId: string
+  chain: string
+  masterChain: string
+  survey: string
+  visitDate: string
+  authorized: boolean
+  packOut: string
+  display: Display
+  notes: string
 }
 
-export const marginPerCase = (i: MerchInputs) => i.sellPerCase - i.cogsPerCase
+const NOT_AUTH_RE = /not authorized|not in system|not on planogram|item\(s\) not|no authorization/i
+const NOISE_RE = /^(na|n\/a|none|nop|no|-|\.)?$/i
 
-export interface RetailerRoi {
-  retailer: string
-  distributor: string
-  oosCorrected: number
-  voidsCorrected: number
-  touches: number
-  incrementalCases: number
-  incrementalProfit: number
-  merchCost: number
-  netProfit: number
-  roi: number | null // net ÷ cost (fraction; ×100 for %)
+const clean = (s: string) => s.replace(/\s+/g, ' ').trim()
+const titleCase = (s: string) => clean(s).replace(/\b\w/g, (c) => c.toUpperCase())
+
+function splitStore(info: string): { label: string; address: string } {
+  const parts = info.split('|')
+  if (parts.length >= 2) return { label: clean(parts[0]), address: clean(parts.slice(1).join('|')) }
+  return { label: clean(info), address: '' }
 }
 
-// Aggregate rows to one record per retailer (+distributor) and compute ROI.
-export function buildRetailerRoi(
-  table: ParsedTable,
-  map: MerchColumnMap,
-  inputs: MerchInputs,
-): RetailerRoi[] {
-  const get = (row: string[], f: MerchField): string | null => {
-    const idx = map[f]
-    return idx == null ? null : (row[idx] ?? null)
+function classifyPackOut(resp: string, authorized: boolean): string {
+  if (!authorized) return 'Not Authorized'
+  const r = resp.toLowerCase()
+  if (!r) return '—'
+  if (/shelf is full|shelf full|display-shelf|is full|\bfull\b/.test(r)) return 'Shelf Full'
+  if (/out of stock|\boos\b|empty|no stock/.test(r)) return 'Out of Stock'
+  const num = r.match(/\d+/)
+  if (num) return `Packed ${num[0]}`
+  return titleCase(resp)
+}
+
+function classifyDisplay(resp: string): Display {
+  const r = resp.toLowerCase()
+  if (!r) return '—'
+  if (/refused/.test(r)) return 'Refused'
+  if (/not up|no product|no display|no location|no unit|no secondary/.test(r)) return 'Not Up'
+  if (/\bup\b|built|present|\byes\b|installed/.test(r)) return 'Display Up'
+  return 'Not Up'
+}
+
+export function buildVisits(table: ParsedTable, map: MerchColumnMap): StoreVisit[] {
+  const get = (row: string[], f: MerchField) => {
+    const i = map[f]
+    return i == null ? '' : clean(row[i] ?? '')
   }
-  const margin = marginPerCase(inputs)
 
-  const agg = new Map<
-    string,
-    { retailer: string; distributor: string; oos: number; voids: number; touches: number }
-  >()
+  // Group rows into visits: store identity + visit date.
+  const groups = new Map<string, string[][]>()
+  const order: string[] = []
   for (const row of table.rows) {
-    const retailer = (get(row, 'retailer') ?? '').trim()
-    const distributor = (get(row, 'distributor') ?? '').trim()
-    const oos = parseNumber(get(row, 'oosCorrected')) ?? 0
-    const voids = parseNumber(get(row, 'voidsCorrected')) ?? 0
-    const touches = parseNumber(get(row, 'touches')) ?? 0
-    if (!retailer && oos === 0 && voids === 0 && touches === 0) continue
-
-    const key = `${retailer}||${distributor}`
-    const e = agg.get(key) ?? { retailer, distributor, oos: 0, voids: 0, touches: 0 }
-    e.oos += oos
-    e.voids += voids
-    e.touches += touches
-    agg.set(key, e)
+    const id = get(row, 'storeId') || get(row, 'storeInfo')
+    if (!id) continue
+    const when = get(row, 'visitDate') || get(row, 'weekStart')
+    const key = `${id}|${when}`
+    if (!groups.has(key)) {
+      groups.set(key, [])
+      order.push(key)
+    }
+    groups.get(key)!.push(row)
   }
 
-  const out: RetailerRoi[] = []
-  for (const e of agg.values()) {
-    const incrementalCases = e.oos * inputs.casesPerOos + e.voids * inputs.casesPerVoid
-    const incrementalProfit = incrementalCases * margin
-    const merchCost = e.touches * inputs.costPerTouch
-    const netProfit = incrementalProfit - merchCost
-    const roi = merchCost > 0 ? netProfit / merchCost : null
-    out.push({
-      retailer: e.retailer || '—',
-      distributor: e.distributor,
-      oosCorrected: e.oos,
-      voidsCorrected: e.voids,
-      touches: e.touches,
-      incrementalCases,
-      incrementalProfit,
-      merchCost,
-      netProfit,
-      roi,
+  const firstOf = (rows: string[][], f: MerchField) => {
+    for (const r of rows) {
+      const v = get(r, f)
+      if (v) return v
+    }
+    return ''
+  }
+  const responseFor = (rows: string[][], re: RegExp) => {
+    for (const r of rows) {
+      if (re.test(get(r, 'question'))) return get(r, 'response')
+    }
+    return ''
+  }
+
+  const visits: StoreVisit[] = []
+  for (const key of order) {
+    const rows = groups.get(key)!
+    const { label, address } = splitStore(firstOf(rows, 'storeInfo'))
+    const authorized = !rows.some((r) => NOT_AUTH_RE.test(get(r, 'response')))
+    const packResp = responseFor(rows, /pack ?out|did you pack/i)
+    const displayResp = responseFor(rows, /secondary display|display of odyssey/i)
+    const issueResp = responseFor(rows, /issue with product|stock level|pricing|describe any/i)
+
+    visits.push({
+      key,
+      store: label || firstOf(rows, 'storeId'),
+      address,
+      storeId: firstOf(rows, 'storeId'),
+      chain: firstOf(rows, 'chain'),
+      masterChain: firstOf(rows, 'masterChain'),
+      survey: firstOf(rows, 'survey'),
+      visitDate: firstOf(rows, 'visitDate') || firstOf(rows, 'weekStart'),
+      authorized,
+      packOut: classifyPackOut(packResp, authorized),
+      display: displayResp ? classifyDisplay(displayResp) : '—',
+      notes: NOISE_RE.test(issueResp) ? '' : issueResp,
     })
   }
-  return out.sort((a, b) => (b.roi ?? -Infinity) - (a.roi ?? -Infinity))
+  return visits
 }
 
 export interface MerchSummary {
-  retailers: number
-  touches: number
-  incrementalCases: number
-  incrementalProfit: number
-  merchCost: number
-  netProfit: number
-  roi: number | null
+  visits: number
+  authorized: number
+  notAuthorized: number
+  shelfFull: number
+  outOfStock: number
+  displayUp: number
+  refused: number
+  authRate: number // authorized / visits
+  shelfFullRate: number // shelfFull / authorized
+  displayUpRate: number // displayUp / visits
 }
 
-export function summarize(rows: RetailerRoi[]): MerchSummary {
-  const s = rows.reduce(
-    (acc, r) => {
-      acc.touches += r.touches
-      acc.incrementalCases += r.incrementalCases
-      acc.incrementalProfit += r.incrementalProfit
-      acc.merchCost += r.merchCost
-      acc.netProfit += r.netProfit
-      return acc
-    },
-    { touches: 0, incrementalCases: 0, incrementalProfit: 0, merchCost: 0, netProfit: 0 },
-  )
+export function summarize(visits: StoreVisit[]): MerchSummary {
+  const n = visits.length
+  const authorized = visits.filter((v) => v.authorized).length
+  const shelfFull = visits.filter((v) => v.packOut === 'Shelf Full').length
+  const outOfStock = visits.filter((v) => v.packOut === 'Out of Stock').length
+  const displayUp = visits.filter((v) => v.display === 'Display Up').length
+  const refused = visits.filter((v) => v.display === 'Refused').length
   return {
-    retailers: rows.length,
-    ...s,
-    roi: s.merchCost > 0 ? s.netProfit / s.merchCost : null,
+    visits: n,
+    authorized,
+    notAuthorized: n - authorized,
+    shelfFull,
+    outOfStock,
+    displayUp,
+    refused,
+    authRate: n ? authorized / n : 0,
+    shelfFullRate: authorized ? shelfFull / authorized : 0,
+    displayUpRate: n ? displayUp / n : 0,
   }
+}
+
+export interface ChainRollup {
+  chain: string
+  visits: number
+  authorized: number
+  notAuthorized: number
+  shelfFull: number
+  displayUp: number
+  refused: number
+  authRate: number
+}
+
+export function byChain(visits: StoreVisit[]): ChainRollup[] {
+  const m = new Map<string, StoreVisit[]>()
+  for (const v of visits) {
+    const c = v.chain || v.masterChain || '—'
+    const list = m.get(c) ?? []
+    list.push(v)
+    m.set(c, list)
+  }
+  return [...m.entries()]
+    .map(([chain, list]) => {
+      const authorized = list.filter((v) => v.authorized).length
+      return {
+        chain,
+        visits: list.length,
+        authorized,
+        notAuthorized: list.length - authorized,
+        shelfFull: list.filter((v) => v.packOut === 'Shelf Full').length,
+        displayUp: list.filter((v) => v.display === 'Display Up').length,
+        refused: list.filter((v) => v.display === 'Refused').length,
+        authRate: list.length ? authorized / list.length : 0,
+      }
+    })
+    .sort((a, b) => b.visits - a.visits)
+}
+
+// Convenience for tests / direct use.
+export function analyze(text: string) {
+  const table = parseTable(text)
+  const map = detectMerchColumns(table)
+  const visits = buildVisits(table, map)
+  return { table, map, visits, summary: summarize(visits), chains: byChain(visits) }
 }
