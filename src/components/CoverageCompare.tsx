@@ -122,7 +122,7 @@ export function CoverageCompare({ loadedDsd }: { loadedDsd?: LoadedDsd[] }) {
         address — we&apos;ll resolve addresses to counties for you). The map shows:{' '}
         <span style={{ color: theme.info }}>Served</span> (retailers + coverage),{' '}
         <span style={{ color: theme.bad }}>Gap</span> (retailers, no coverage),{' '}
-        <span style={{ color: theme.good }}>Buffer</span> (coverage, no retailers).
+        <span style={{ color: theme.good }}>Existing Coverage</span> (coverage, no retailers).
       </p>
 
       <PastePanel
@@ -303,14 +303,14 @@ function Results({ result }: { result: NonNullable<ReturnType<typeof compareCove
     for (const g of gaps) m.set(g.fips, `Gap · ${fmtInt(g.outlets)} outlets`)
     for (const s of served) m.set(s.fips, `Served · ${fmtInt(s.outlets)} outlets`)
     for (const [fips, status] of statusByFips)
-      if (status === 'coverageOnly' && !m.has(fips)) m.set(fips, "Buffer · no retailers")
+      if (status === 'coverageOnly' && !m.has(fips)) m.set(fips, "Existing Coverage · no retailers")
     return m
   }, [gaps, served, statusByFips])
 
   const legend = [
     { label: 'Served', color: servedColor },
     { label: 'Gap', color: gapColor },
-    { label: 'Buffer', color: coverageColor },
+    { label: 'Existing Coverage', color: coverageColor },
   ]
 
   return (
@@ -319,7 +319,7 @@ function Results({ result }: { result: NonNullable<ReturnType<typeof compareCove
         <Kpi label="Served" value={fmtInt(counts.servedCounties)} color={theme.info} />
         <Kpi label="Gap" value={fmtInt(counts.gapCounties)} color={theme.bad} />
         <Kpi label="Outlets in gap" value={fmtInt(counts.outletsGap)} color={theme.bad} />
-        <Kpi label="Buffer" value={fmtInt(counts.coverageOnly)} color={theme.good} />
+        <Kpi label="Existing Coverage" value={fmtInt(counts.coverageOnly)} color={theme.good} />
       </div>
       {counts.unresolved > 0 && (
         <div className="text-xs text-muted">
@@ -332,7 +332,7 @@ function Results({ result }: { result: NonNullable<ReturnType<typeof compareCove
         <div className="flex flex-wrap items-center gap-4">
           <ColorPick label="Served" value={servedColor} onChange={setServedColor} />
           <ColorPick label="Gap" value={gapColor} onChange={setGapColor} />
-          <ColorPick label="Buffer" value={coverageColor} onChange={setCoverageColor} />
+          <ColorPick label="Existing Coverage" value={coverageColor} onChange={setCoverageColor} />
         </div>
         <CoverageMap
           fillByFips={fillByFips}
