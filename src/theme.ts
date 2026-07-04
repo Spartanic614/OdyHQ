@@ -23,6 +23,7 @@ export const theme = {
   good: '#34d399', // Authorized
   bad: '#fb7185', // Not Authorized / risk
   warn: '#fbbf24',
+  info: '#38bdf8', // Need + have coverage (e.g. served counties)
   neutral: '#6b7280',
 } as const
 

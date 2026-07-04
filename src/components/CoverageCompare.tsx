@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   parseTable,
   detectColumns,
@@ -8,13 +8,14 @@ import {
   type Field,
   type Table,
 } from '../lib/coverageCompare'
+import { geocodeAddresses, type GeocodeMatch, type GeocodeProgress } from '../lib/geocode'
 import { CoverageMap } from './CoverageMap'
 import { EmptyState } from './States'
 import { exportCsv } from '../lib/csv'
 import { fmtInt } from '../lib/format'
 import { theme } from '../theme'
 
-const RETAIL_FIELDS: Field[] = ['fips', 'county', 'state', 'outlets']
+const RETAIL_FIELDS: Field[] = ['fips', 'county', 'state', 'address', 'outlets']
 
 export interface LoadedDsd {
   county: string | null
@@ -27,7 +28,23 @@ export function CoverageCompare({ loadedDsd }: { loadedDsd?: LoadedDsd[] }) {
   const [retailText, setRetailText] = useState('')
   const [retailOverride, setRetailOverride] = useState<ColMap>({})
 
+  // Address -> county resolution (only used when the paste has an address
+  // column but no county/state/FIPS). Keyed by row index in retail.table.rows.
+  const [geoResults, setGeoResults] = useState<Map<number, GeocodeMatch | null>>(new Map())
+  const [geoStatus, setGeoStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
+  const [geoProgress, setGeoProgress] = useState<GeocodeProgress>({ done: 0, total: 0 })
+  const [geoError, setGeoError] = useState<string | null>(null)
+
   const retail = useParsed(retailText, retailOverride)
+
+  // Reset geocoding state whenever the paste changes — stale results from a
+  // previous data set must not silently carry over.
+  useEffect(() => {
+    setGeoResults(new Map())
+    setGeoStatus('idle')
+    setGeoProgress({ done: 0, total: 0 })
+    setGeoError(null)
+  }, [retailText])
 
   // Distributor side = your CURRENT loaded DSD coverage (no paste needed).
   const dist = useMemo(() => {
@@ -43,35 +60,82 @@ export function CoverageCompare({ loadedDsd }: { loadedDsd?: LoadedDsd[] }) {
     }
   }, [loadedDsd])
 
-  const retailKeyed =
+  const hasDirectKey =
     retail.map.fips != null || (retail.map.county != null && retail.map.state != null)
-  const ready = retail.table.rows.length > 0 && dist.table.rows.length > 0 && retailKeyed
+  const hasAddress = retail.map.address != null
+  // County-mapping data was pasted without county/state — geocoding can fill the gap.
+  const needsGeocode = hasAddress && !hasDirectKey
+
+  // Once geocoded, append a synthetic FIPS column so compareCoverage can run
+  // unchanged — unmatched rows get an empty FIPS and fall out as "unresolved".
+  const { table: retailTable, map: retailMap } = useMemo(() => {
+    if (!needsGeocode || geoStatus !== 'done') return { table: retail.table, map: retail.map }
+    const fipsCol = retail.table.headers.length
+    const rows = retail.table.rows.map((r, i) => [...r, geoResults.get(i)?.fips ?? ''])
+    return {
+      table: { headers: [...retail.table.headers, 'Resolved County FIPS'], rows },
+      map: { ...retail.map, fips: fipsCol },
+    }
+  }, [needsGeocode, geoStatus, retail.table, retail.map, geoResults])
+
+  const ready =
+    retailTable.rows.length > 0 &&
+    dist.table.rows.length > 0 &&
+    (hasDirectKey || (needsGeocode && geoStatus === 'done'))
 
   const result = useMemo(() => {
     if (!ready) return null
     try {
-      return compareCoverage(retail.table, retail.map, dist.table, dist.map)
+      return compareCoverage(retailTable, retailMap, dist.table, dist.map)
     } catch {
       return null
     }
-  }, [ready, retail.table, retail.map, dist.table, dist.map])
+  }, [ready, retailTable, retailMap, dist.table, dist.map])
+
+  const runGeocode = async () => {
+    const addrCol = retail.map.address
+    if (addrCol == null) return
+    setGeoStatus('running')
+    setGeoError(null)
+    const rows = retail.table.rows.map((r, i) => ({ id: String(i), address: r[addrCol] ?? '' }))
+    try {
+      const results = await geocodeAddresses(rows, setGeoProgress)
+      const byIndex = new Map<number, GeocodeMatch | null>()
+      results.forEach((v, k) => byIndex.set(Number(k), v))
+      setGeoResults(byIndex)
+      setGeoStatus('done')
+    } catch (e) {
+      setGeoError(e instanceof Error ? e.message : String(e))
+      setGeoStatus('error')
+    }
+  }
+
+  const geoMatchedCount = useMemo(
+    () => [...geoResults.values()].filter((v) => v?.matched).length,
+    [geoResults],
+  )
 
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted">
-        Paste your retailer outlets below. The map shows your{' '}
-        <span style={{ color: theme.good }}>current DSD coverage</span> and flags
-        the counties where you have outlets but{' '}
-        <span style={{ color: theme.bad }}>no coverage</span> — the ones you&apos;d
-        need a new DSD for. Compared against{' '}
-        {loadedDsd?.length ? `${fmtInt(loadedDsd.length)} loaded counties` : 'your loaded DSD data'}.
+        Paste your retailer outlets below (county/state, FIPS, or a street
+        address — we&apos;ll resolve addresses to counties for you). The map
+        compares them against your{' '}
+        {loadedDsd?.length ? `${fmtInt(loadedDsd.length)} loaded DSD counties` : 'loaded DSD coverage'}:{' '}
+        <span style={{ color: theme.info }}>need it, have it</span>,{' '}
+        <span style={{ color: theme.bad }}>need it, don&apos;t have it</span>, and{' '}
+        <span style={{ color: theme.good }}>have it, don&apos;t need it</span>.
       </p>
 
       <PastePanel
         step="1"
         title="Retailer outlets"
         fields={RETAIL_FIELDS}
-        placeholder={'County\tState\tStores\nMaricopa\tAZ\t14\nHarris\tTX\t9'}
+        placeholder={
+          'County\tState\tStores\nMaricopa\tAZ\t14\nHarris\tTX\t9\n\n' +
+          '— or, no county? just paste an address column —\n' +
+          'Address\tStores\n155 Harvard St, Brookline, MA 02446\t14'
+        }
         text={retailText}
         onText={(v) => {
           setRetailText(v)
@@ -81,6 +145,47 @@ export function CoverageCompare({ loadedDsd }: { loadedDsd?: LoadedDsd[] }) {
         onSetCol={(f, i) => setRetailOverride((m) => ({ ...m, [f]: i }))}
       />
 
+      {needsGeocode && (
+        <div className="card p-3 space-y-2">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="text-sm">
+              <span className="font-semibold">Address-only data detected.</span>{' '}
+              <span className="text-muted">
+                No county/state or FIPS column — resolve the {fmtInt(retail.table.rows.length)} address(es)
+                to counties before comparing.
+              </span>
+            </div>
+            <button
+              className="btn btn-accent text-xs shrink-0"
+              onClick={runGeocode}
+              disabled={geoStatus === 'running'}
+            >
+              {geoStatus === 'running'
+                ? `Resolving… ${fmtInt(geoProgress.done)}/${fmtInt(geoProgress.total)}`
+                : geoStatus === 'done'
+                  ? '↻ Re-resolve addresses'
+                  : '📍 Resolve addresses to counties'}
+            </button>
+          </div>
+          {geoStatus === 'done' && (
+            <div className="text-xs text-muted">
+              {fmtInt(geoMatchedCount)} of {fmtInt(retail.table.rows.length)} addresses matched to a
+              county.
+              {geoMatchedCount < retail.table.rows.length && (
+                <span style={{ color: theme.warn }}>
+                  {' '}
+                  {fmtInt(retail.table.rows.length - geoMatchedCount)} couldn&apos;t be matched — check
+                  those addresses.
+                </span>
+              )}
+            </div>
+          )}
+          {geoStatus === 'error' && (
+            <div className="text-xs text-bad">Geocoding failed: {geoError}</div>
+          )}
+        </div>
+      )}
+
       {!ready ? (
         <EmptyState
           message={
@@ -88,7 +193,9 @@ export function CoverageCompare({ loadedDsd }: { loadedDsd?: LoadedDsd[] }) {
               ? 'DSD coverage still loading…'
               : !retailText.trim()
                 ? 'Paste your retailer outlets above to see what counties you’re missing.'
-                : 'Map the County + State (or FIPS) column on your retailer data.'
+                : needsGeocode
+                  ? 'Click "Resolve addresses to counties" above to continue.'
+                  : 'Map the County + State (or FIPS) column on your retailer data.'
           }
         />
       ) : (
@@ -180,9 +287,10 @@ function PastePanel({
 
 function Results({ result }: { result: NonNullable<ReturnType<typeof compareCoverage>> }) {
   const { counts, gaps, served, statusByFips } = result
-  const [servedColor, setServedColor] = useState<string>(theme.good)
+  // Color scheme: blue = need it & have it; red = need it & don't; green = have it & don't need it.
+  const [servedColor, setServedColor] = useState<string>(theme.info)
   const [gapColor, setGapColor] = useState<string>(theme.bad)
-  const [coverageColor, setCoverageColor] = useState<string>('#39414f')
+  const [coverageColor, setCoverageColor] = useState<string>(theme.good)
 
   const fillByFips = useMemo(() => {
     const m = new Map<string, string>()
@@ -194,39 +302,39 @@ function Results({ result }: { result: NonNullable<ReturnType<typeof compareCove
 
   const tooltipByFips = useMemo(() => {
     const m = new Map<string, string>()
-    for (const g of gaps) m.set(g.fips, `Needs a DSD · ${fmtInt(g.outlets)} outlets`)
-    for (const s of served) m.set(s.fips, `Served · ${fmtInt(s.outlets)} outlets`)
+    for (const g of gaps) m.set(g.fips, `Need coverage, don't have it · ${fmtInt(g.outlets)} outlets`)
+    for (const s of served) m.set(s.fips, `Need coverage, have it · ${fmtInt(s.outlets)} outlets`)
     for (const [fips, status] of statusByFips)
-      if (status === 'coverageOnly' && !m.has(fips)) m.set(fips, 'DSD coverage (no outlets)')
+      if (status === 'coverageOnly' && !m.has(fips)) m.set(fips, "Have coverage, don't need it")
     return m
   }, [gaps, served, statusByFips])
 
   const legend = [
-    { label: 'Served (outlets + DSD)', color: servedColor },
-    { label: 'Needs a DSD (outlets, no coverage)', color: gapColor },
-    { label: 'DSD coverage only', color: coverageColor },
+    { label: 'Need it, have it', color: servedColor },
+    { label: "Need it, don't have it", color: gapColor },
+    { label: "Have it, don't need it", color: coverageColor },
   ]
 
   return (
     <div className="space-y-4">
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-        <Kpi label="Counties served" value={fmtInt(counts.servedCounties)} color={theme.good} />
-        <Kpi label="Counties needing a DSD" value={fmtInt(counts.gapCounties)} color={theme.bad} />
+        <Kpi label="Need it, have it" value={fmtInt(counts.servedCounties)} color={theme.info} />
+        <Kpi label="Need it, don't have it" value={fmtInt(counts.gapCounties)} color={theme.bad} />
         <Kpi label="Outlets with no DSD" value={fmtInt(counts.outletsGap)} color={theme.bad} />
-        <Kpi label="Outlets served" value={fmtInt(counts.outletsServed)} color={theme.good} />
+        <Kpi label="Have it, don't need it" value={fmtInt(counts.coverageOnly)} color={theme.good} />
       </div>
       {counts.unresolved > 0 && (
         <div className="text-xs text-muted">
           {fmtInt(counts.unresolved)} retailer row(s) couldn’t be matched to a county
-          (missing/unknown county+state or FIPS).
+          (missing/unknown county+state, FIPS, or unresolved address).
         </div>
       )}
 
       <div className="card p-3 space-y-3">
         <div className="flex flex-wrap items-center gap-4">
-          <ColorPick label="Served" value={servedColor} onChange={setServedColor} />
-          <ColorPick label="Needs a DSD" value={gapColor} onChange={setGapColor} />
-          <ColorPick label="Coverage only" value={coverageColor} onChange={setCoverageColor} />
+          <ColorPick label="Need it, have it" value={servedColor} onChange={setServedColor} />
+          <ColorPick label="Need it, don't have it" value={gapColor} onChange={setGapColor} />
+          <ColorPick label="Have it, don't need it" value={coverageColor} onChange={setCoverageColor} />
         </div>
         <CoverageMap
           fillByFips={fillByFips}
@@ -240,7 +348,7 @@ function Results({ result }: { result: NonNullable<ReturnType<typeof compareCove
         <div className="flex items-center justify-between p-2 border-b border-ink-700">
           <div className="text-sm font-semibold">
             Counties needing a new DSD
-            <span className="text-muted font-normal"> — retailer outlets with no coverage</span>
+            <span className="text-muted font-normal"> — need coverage, don&apos;t have it</span>
           </div>
           <button
             className="btn text-xs"

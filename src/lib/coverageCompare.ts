@@ -19,12 +19,13 @@ export function parseTable(text: string): Table {
   return { headers, rows }
 }
 
-export type Field = 'fips' | 'county' | 'state' | 'outlets' | 'distributor'
+export type Field = 'fips' | 'county' | 'state' | 'address' | 'outlets' | 'distributor'
 
 export const FIELD_LABELS: Record<Field, string> = {
   fips: 'County FIPS',
   county: 'County',
   state: 'State',
+  address: 'Street Address',
   outlets: 'Outlets (count)',
   distributor: 'Distributor',
 }
@@ -33,6 +34,10 @@ const ALIASES: Record<Field, string[]> = {
   fips: ['fips', 'county_fips', 'fips_code', 'county_fips_code', 'geoid', 'geo_id', 'fips5'],
   county: ['county', 'county_name', 'official_name_county', 'county_text', 'parish', 'borough'],
   state: ['state', 'state_name', 'official_name_state', 'st', 'state_abbr', 'state_abbreviation', 'state_code', 'province'],
+  address: [
+    'address', 'street_address', 'full_address', 'store_address', 'location',
+    'store_info', 'store', 'addr', 'site_address', 'mailing_address',
+  ],
   outlets: ['outlets', 'stores', 'store_count', 'storecount', 'count', 'outlet_count', 'locations', 'doors', 'num_stores', 'number_of_stores', 'tdp', 'acv'],
   distributor: ['distributor', 'dsd', 'dsd_distributor', 'coverage', 'distributor_name', 'supplier', 'wholesaler'],
 }

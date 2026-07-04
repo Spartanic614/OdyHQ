@@ -1,9 +1,11 @@
+import { useMemo, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
 import { useData } from '../data/store'
+import { useLocalStorage } from '../lib/useLocalStorage'
 import { ErrorBoundary } from './ErrorBoundary'
 
-const NAV = [
+const DEFAULT_NAV = [
   { to: '/accounts', label: 'Account Management' },
   { to: '/battlecards', label: 'Battlecards' },
   { to: '/distribution', label: 'Distribution' },
@@ -17,10 +19,44 @@ const NAV = [
   { to: '/portfolio', label: 'Portfolio' },
 ]
 
+// Reorder DEFAULT_NAV per a saved list of `to` paths — unknown/removed paths
+// are dropped, newly added pages are appended so they still show up.
+function applyOrder(order: string[]): typeof DEFAULT_NAV {
+  const byTo = new Map(DEFAULT_NAV.map((n) => [n.to, n]))
+  const ordered = order.map((to) => byTo.get(to)).filter((n): n is (typeof DEFAULT_NAV)[number] => !!n)
+  const seen = new Set(ordered.map((n) => n.to))
+  const rest = DEFAULT_NAV.filter((n) => !seen.has(n.to))
+  return [...ordered, ...rest]
+}
+
 export function Shell() {
   const { user, signOut } = useAuth()
   const { lastRefresh, refresh, loading } = useData()
   const location = useLocation()
+
+  const [order, setOrder] = useLocalStorage<string[]>(
+    'nav_order',
+    DEFAULT_NAV.map((n) => n.to),
+  )
+  const nav = useMemo(() => applyOrder(order), [order])
+
+  const [dragTo, setDragTo] = useState<string | null>(null)
+  const [overTo, setOverTo] = useState<string | null>(null)
+  const draggingRef = useRef(false)
+
+  const onDrop = (targetTo: string) => {
+    if (!dragTo || dragTo === targetTo) return
+    setOrder((prev) => {
+      const cur = applyOrder(prev).map((n) => n.to)
+      const from = cur.indexOf(dragTo)
+      const to = cur.indexOf(targetTo)
+      if (from < 0 || to < 0) return prev
+      const next = [...cur]
+      next.splice(from, 1)
+      next.splice(to, 0, dragTo)
+      return next
+    })
+  }
 
   return (
     <div className="flex h-full">
@@ -34,20 +70,52 @@ export function Shell() {
           </div>
         </div>
         <nav className="flex-1 overflow-auto py-2">
-          {NAV.map((n) => (
-            <NavLink
+          {nav.map((n) => (
+            <div
               key={n.to}
-              to={n.to}
-              className={({ isActive }) =>
-                `block px-4 py-2 text-sm border-l-2 transition-colors ${
-                  isActive
-                    ? 'border-accent bg-white/10 text-text'
-                    : 'border-transparent text-muted hover:text-text hover:bg-white/5'
-                }`
-              }
+              draggable
+              onDragStart={(e) => {
+                draggingRef.current = true
+                setDragTo(n.to)
+                e.dataTransfer.effectAllowed = 'move'
+              }}
+              onDragEnd={() => {
+                draggingRef.current = false
+                setDragTo(null)
+                setOverTo(null)
+              }}
+              onDragOver={(e) => {
+                e.preventDefault()
+                if (draggingRef.current) setOverTo(n.to)
+              }}
+              onDragLeave={() => setOverTo((cur) => (cur === n.to ? null : cur))}
+              onDrop={(e) => {
+                e.preventDefault()
+                onDrop(n.to)
+                setOverTo(null)
+              }}
+              className={`group relative ${overTo === n.to && dragTo !== n.to ? 'bg-accent/10' : ''}`}
             >
-              {n.label}
-            </NavLink>
+              <NavLink
+                to={n.to}
+                className={({ isActive }) =>
+                  `flex items-center gap-2 pl-2 pr-4 py-2 text-sm border-l-2 transition-colors ${
+                    isActive
+                      ? 'border-accent bg-white/10 text-text'
+                      : 'border-transparent text-muted hover:text-text hover:bg-white/5'
+                  } ${dragTo === n.to ? 'opacity-40' : ''}`
+                }
+              >
+                <span
+                  className="cursor-grab active:cursor-grabbing text-ink-500 group-hover:text-muted select-none px-0.5"
+                  title="Drag to reorder"
+                  aria-hidden
+                >
+                  ⠿
+                </span>
+                {n.label}
+              </NavLink>
+            </div>
           ))}
         </nav>
       </aside>
