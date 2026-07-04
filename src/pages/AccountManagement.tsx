@@ -21,7 +21,7 @@ const MEETING_OPTIONS = [
   'Executed',
 ]
 
-type Tab = 'tracker' | 'hitlist' | 'mostwanted'
+type Tab = 'tracker' | 'hitlist' | 'mostwanted' | 'authgap'
 
 export function AccountManagement() {
   const [tab, setTab] = useState<Tab>('tracker')
@@ -50,12 +50,19 @@ export function AccountManagement() {
           >
             Most Wanted
           </button>
+          <button
+            className={`btn text-sm ${tab === 'authgap' ? 'btn-accent' : ''}`}
+            onClick={() => setTab('authgap')}
+          >
+            Pineapple Mango Gap
+          </button>
         </div>
       </div>
 
       {tab === 'tracker' && <Tracker onPick={setChainId} />}
       {tab === 'hitlist' && <HitList onPick={setChainId} />}
       {tab === 'mostwanted' && <MostWanted onPick={setChainId} />}
+      {tab === 'authgap' && <PineappleMangoGap onPick={setChainId} />}
 
       <ChainDrawer chainId={chainId} onClose={() => setChainId(null)} />
     </div>
@@ -406,6 +413,136 @@ function MostWantedBox({
             )
           })}
         </div>
+      )}
+    </div>
+  )
+}
+
+// ---- Pineapple Mango Authorization Gap ----
+function PineappleMangoGap({ onPick }: { onPick: (id: string) => void }) {
+  const { chains, chainSkuAuth, skus, loading } = useData()
+  const [am, setAm] = useState('')
+  const [search, setSearch] = useState('')
+
+  // Find Pineapple Mango SKU
+  const pmSku = useMemo(
+    () => skus.rows.find((s) => (s.flavor ?? '').toLowerCase().includes('pineapple')),
+    [skus.rows],
+  )
+  const pmSkuCode = pmSku?.sku_code
+
+  // Chains with distribution but NO Pineapple Mango authorization
+  const gaps = useMemo(() => {
+    if (!pmSkuCode) return []
+
+    // Map of chain_id -> auth_status for Pineapple Mango
+    const pmAuthByChain = new Map(
+      chainSkuAuth.rows
+        .filter((r) => r.sku_code === pmSkuCode)
+        .map((r) => [r.chain_id, r.auth_status]),
+    )
+
+    // Get all chains with distribution, filter by PM not authorized
+    return chains.rows
+      .filter((c) => (c.total_universe ?? 0) > 0)
+      .filter((c) => !am || c.account_manager === am)
+      .filter((c) =>
+        !search.trim()
+          ? true
+          : (c.chain_name ?? c.chain_id)
+              .toLowerCase()
+              .includes(search.toLowerCase()),
+      )
+      .filter((c) => {
+        const auth = pmAuthByChain.get(c.chain_id)
+        // Include if NOT_AUTHORIZED or not tracked at all (—)
+        return auth !== 'Authorized' && auth !== 'ACTIVE'
+      })
+      .sort((a, b) => {
+        // Sort: Active first, then by total_universe desc
+        const aActive = a.active === 'Active' ? 1 : 0
+        const bActive = b.active === 'Active' ? 1 : 0
+        if (aActive !== bActive) return bActive - aActive
+        return (b.total_universe ?? 0) - (a.total_universe ?? 0)
+      })
+  }, [chains.rows, chainSkuAuth.rows, pmSkuCode, am, search])
+
+  const columns: Column<(typeof gaps)[number]>[] = [
+    {
+      key: 'name',
+      label: 'Account',
+      value: (c) => c.chain_name ?? c.chain_id,
+    },
+    {
+      key: 'outlets',
+      label: 'Outlets',
+      align: 'right',
+      value: (c) => c.total_universe ?? 0,
+      render: (c) => fmtInt(c.total_universe ?? 0),
+    },
+    {
+      key: 'active',
+      label: 'Status',
+      value: (c) => c.active ?? '—',
+      render: (c) => (
+        <Pill color={c.active === 'Active' ? theme.good : theme.warn}>
+          {c.active ?? '—'}
+        </Pill>
+      ),
+    },
+    {
+      key: 'channel',
+      label: 'Channel',
+      value: (c) => c.channel ?? '—',
+    },
+    {
+      key: 'am',
+      label: 'AM',
+      value: (c) => c.account_manager ?? '—',
+    },
+  ]
+
+  if (loading) return <TableSkeleton />
+  if (!pmSku) {
+    return <EmptyState message="Pineapple Mango SKU not found in database." />
+  }
+
+  return (
+    <div className="space-y-3">
+      {gaps.length === 0 ? (
+        <EmptyState message="All accounts with distribution are authorized for Pineapple Mango. 🎉" />
+      ) : (
+        <>
+          <div className="text-sm text-muted">
+            <span className="font-semibold text-text">{fmtInt(gaps.length)}</span> account(s) with distribution lack Pineapple Mango
+            authorization.
+          </div>
+          <DataTable
+            columns={columns}
+            rows={gaps}
+            rowKey={(c) => c.chain_id}
+            onRowClick={(c) => onPick(c.chain_id)}
+            exportName="pineapple_mango_gaps"
+            initialSort={{ key: 'outlets', dir: 'desc' }}
+            searchPlaceholder="Search accounts…"
+            toolbar={
+              <div className="flex items-center gap-2">
+                <SelectFilter
+                  label="AM"
+                  value={am}
+                  onChange={setAm}
+                  options={uniqueValues(chains.rows, (c) => c.account_manager)}
+                />
+                <input
+                  className="input w-48"
+                  placeholder="Search account name…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+            }
+          />
+        </>
       )}
     </div>
   )
