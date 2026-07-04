@@ -11,12 +11,9 @@ const DEFAULT_NAV = [
   { to: '/distribution', label: 'Distribution' },
   { to: '/dsd-coverage', label: 'DSD Coverage' },
   { to: '/inventory', label: 'Inventory' },
-  { to: '/merchandising', label: 'Merchandising' },
   { to: '/trade-spend', label: 'Trade Spend' },
   { to: '/margin', label: 'Margin' },
-  { to: '/vlookup', label: 'VLOOKUP / Match' },
   { to: '/calendar', label: 'Calendar' },
-  { to: '/portfolio', label: 'Portfolio' },
 ]
 
 // Reorder DEFAULT_NAV per a saved list of `to` paths — unknown/removed paths

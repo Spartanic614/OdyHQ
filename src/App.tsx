@@ -8,12 +8,9 @@ import { Battlecards } from './pages/Battlecards'
 import { Distribution } from './pages/Distribution'
 import { DsdCoverage } from './pages/DsdCoverage'
 import { CalendarPage } from './pages/Calendar'
-import { Portfolio } from './pages/Portfolio'
 import { Inventory } from './pages/Inventory'
-import { Merchandising } from './pages/Merchandising'
 import { TradeSpend } from './pages/TradeSpend'
 import { Margin } from './pages/Margin'
-import { Vlookup } from './pages/Vlookup'
 
 export default function App() {
   const { session, loading } = useAuth()
@@ -45,12 +42,9 @@ export default function App() {
           <Route path="distribution" element={<Distribution />} />
           <Route path="dsd-coverage" element={<DsdCoverage />} />
           <Route path="calendar" element={<CalendarPage />} />
-          <Route path="portfolio" element={<Portfolio />} />
           <Route path="inventory" element={<Inventory />} />
-          <Route path="merchandising" element={<Merchandising />} />
           <Route path="trade-spend" element={<TradeSpend />} />
           <Route path="margin" element={<Margin />} />
-          <Route path="vlookup" element={<Vlookup />} />
           <Route path="*" element={<Navigate to="/accounts" replace />} />
         </Route>
       </Routes>
