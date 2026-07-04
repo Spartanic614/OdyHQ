@@ -58,10 +58,13 @@ export function Shell() {
   return (
     <div className="flex h-full">
       <aside className="w-56 shrink-0 glass-nav border-r border-white/10 flex flex-col">
-        <div className="px-4 py-4 border-b border-white/10">
-          <div className="text-lg font-bold tracking-tight brand">
-            Odyssey Mothership
-          </div>
+        <div className="px-4 py-3 border-b border-white/10 space-y-2">
+          <img
+            src="/odyssey-logo.svg"
+            alt="Odyssey"
+            className="h-16 w-auto"
+            style={{ filter: 'invert(1) brightness(1.1)' }}
+          />
           <div className="text-[11px] text-muted tracking-wide">
             Sales decision tool
           </div>
