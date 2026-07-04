@@ -442,9 +442,10 @@ function PineappleMangoGap({ onPick }: { onPick: (id: string) => void }) {
         .map((r) => [r.chain_id, r.auth_status]),
     )
 
-    // Get all chains with distribution, filter by PM not authorized
+    // Get all chains with distribution, filter by PM not authorized, and Active status only
     return chains.rows
       .filter((c) => (c.total_universe ?? 0) > 0)
+      .filter((c) => c.active === 'Active')
       .filter((c) => !am || c.account_manager === am)
       .filter((c) =>
         !search.trim()
