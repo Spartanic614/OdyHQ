@@ -96,20 +96,13 @@ export function Shell() {
               <NavLink
                 to={n.to}
                 className={({ isActive }) =>
-                  `flex items-center gap-2 pl-2 pr-4 py-2 text-sm border-l-2 transition-colors ${
+                  `block px-4 py-2 text-sm border-l-2 transition-colors cursor-grab active:cursor-grabbing ${
                     isActive
                       ? 'border-accent bg-white/10 text-text'
                       : 'border-transparent text-muted hover:text-text hover:bg-white/5'
                   } ${dragTo === n.to ? 'opacity-40' : ''}`
                 }
               >
-                <span
-                  className="cursor-grab active:cursor-grabbing text-ink-500 group-hover:text-muted select-none px-0.5"
-                  title="Drag to reorder"
-                  aria-hidden
-                >
-                  ⠿
-                </span>
                 {n.label}
               </NavLink>
             </div>
