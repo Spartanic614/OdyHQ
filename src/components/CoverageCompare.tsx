@@ -119,12 +119,10 @@ export function CoverageCompare({ loadedDsd }: { loadedDsd?: LoadedDsd[] }) {
     <div className="space-y-4">
       <p className="text-sm text-muted">
         Paste your retailer outlets below (county/state, FIPS, or a street
-        address — we&apos;ll resolve addresses to counties for you). The map
-        compares them against your{' '}
-        {loadedDsd?.length ? `${fmtInt(loadedDsd.length)} loaded DSD counties` : 'loaded DSD coverage'}:{' '}
-        <span style={{ color: theme.info }}>need it, have it</span>,{' '}
-        <span style={{ color: theme.bad }}>need it, don&apos;t have it</span>, and{' '}
-        <span style={{ color: theme.good }}>have it, don&apos;t need it</span>.
+        address — we&apos;ll resolve addresses to counties for you). The map shows:{' '}
+        <span style={{ color: theme.info }}>Served</span> (retailers + coverage),{' '}
+        <span style={{ color: theme.bad }}>Gap</span> (retailers, no coverage),{' '}
+        <span style={{ color: theme.good }}>Buffer</span> (coverage, no retailers).
       </p>
 
       <PastePanel
@@ -302,26 +300,26 @@ function Results({ result }: { result: NonNullable<ReturnType<typeof compareCove
 
   const tooltipByFips = useMemo(() => {
     const m = new Map<string, string>()
-    for (const g of gaps) m.set(g.fips, `Need coverage, don't have it · ${fmtInt(g.outlets)} outlets`)
-    for (const s of served) m.set(s.fips, `Need coverage, have it · ${fmtInt(s.outlets)} outlets`)
+    for (const g of gaps) m.set(g.fips, `Gap · ${fmtInt(g.outlets)} outlets`)
+    for (const s of served) m.set(s.fips, `Served · ${fmtInt(s.outlets)} outlets`)
     for (const [fips, status] of statusByFips)
-      if (status === 'coverageOnly' && !m.has(fips)) m.set(fips, "Have coverage, don't need it")
+      if (status === 'coverageOnly' && !m.has(fips)) m.set(fips, "Buffer · no retailers")
     return m
   }, [gaps, served, statusByFips])
 
   const legend = [
-    { label: 'Need it, have it', color: servedColor },
-    { label: "Need it, don't have it", color: gapColor },
-    { label: "Have it, don't need it", color: coverageColor },
+    { label: 'Served', color: servedColor },
+    { label: 'Gap', color: gapColor },
+    { label: 'Buffer', color: coverageColor },
   ]
 
   return (
     <div className="space-y-4">
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-        <Kpi label="Need it, have it" value={fmtInt(counts.servedCounties)} color={theme.info} />
-        <Kpi label="Need it, don't have it" value={fmtInt(counts.gapCounties)} color={theme.bad} />
-        <Kpi label="Outlets with no DSD" value={fmtInt(counts.outletsGap)} color={theme.bad} />
-        <Kpi label="Have it, don't need it" value={fmtInt(counts.coverageOnly)} color={theme.good} />
+        <Kpi label="Served" value={fmtInt(counts.servedCounties)} color={theme.info} />
+        <Kpi label="Gap" value={fmtInt(counts.gapCounties)} color={theme.bad} />
+        <Kpi label="Outlets in gap" value={fmtInt(counts.outletsGap)} color={theme.bad} />
+        <Kpi label="Buffer" value={fmtInt(counts.coverageOnly)} color={theme.good} />
       </div>
       {counts.unresolved > 0 && (
         <div className="text-xs text-muted">
@@ -332,9 +330,9 @@ function Results({ result }: { result: NonNullable<ReturnType<typeof compareCove
 
       <div className="card p-3 space-y-3">
         <div className="flex flex-wrap items-center gap-4">
-          <ColorPick label="Need it, have it" value={servedColor} onChange={setServedColor} />
-          <ColorPick label="Need it, don't have it" value={gapColor} onChange={setGapColor} />
-          <ColorPick label="Have it, don't need it" value={coverageColor} onChange={setCoverageColor} />
+          <ColorPick label="Served" value={servedColor} onChange={setServedColor} />
+          <ColorPick label="Gap" value={gapColor} onChange={setGapColor} />
+          <ColorPick label="Buffer" value={coverageColor} onChange={setCoverageColor} />
         </div>
         <CoverageMap
           fillByFips={fillByFips}
@@ -347,8 +345,8 @@ function Results({ result }: { result: NonNullable<ReturnType<typeof compareCove
       <div className="card overflow-hidden">
         <div className="flex items-center justify-between p-2 border-b border-ink-700">
           <div className="text-sm font-semibold">
-            Counties needing a new DSD
-            <span className="text-muted font-normal"> — need coverage, don&apos;t have it</span>
+            Coverage Gaps
+            <span className="text-muted font-normal"> — retailers with no DSD coverage</span>
           </div>
           <button
             className="btn text-xs"
