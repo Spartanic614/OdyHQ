@@ -8,6 +8,7 @@ import { ErrorBoundary } from './ErrorBoundary'
 const DEFAULT_NAV = [
   { to: '/accounts', label: 'Account Management' },
   { to: '/battlecards', label: 'Battlecards' },
+  { to: '/portfolio', label: 'Portfolio' },
   { to: '/distribution', label: 'Distribution' },
   { to: '/dsd-coverage', label: 'DSD Coverage' },
   { to: '/inventory', label: 'Inventory' },
