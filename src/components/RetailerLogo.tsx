@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { getLogoUrl, getChainInitials } from '../config/chainLogos'
 import { theme } from '../theme'
 
@@ -10,6 +10,7 @@ interface RetailerLogoProps {
 export function RetailerLogo({ chainName, size = 'md' }: RetailerLogoProps) {
   const logoUrl = useMemo(() => getLogoUrl(chainName), [chainName])
   const initials = useMemo(() => getChainInitials(chainName), [chainName])
+  const [imageLoaded, setImageLoaded] = useState(false)
 
   const sizeClass = {
     sm: 'w-6 h-6 text-xs',
@@ -17,25 +18,38 @@ export function RetailerLogo({ chainName, size = 'md' }: RetailerLogoProps) {
     lg: 'w-12 h-12 text-base',
   }[size]
 
+  const badgeClass = `${sizeClass} rounded flex items-center justify-center font-bold flex-shrink-0`
+
   if (logoUrl) {
     return (
-      <img
-        src={logoUrl}
-        alt={chainName}
-        className={`${sizeClass} rounded object-contain bg-white/5 p-1`}
-        onError={(e) => {
-          // Fallback to initials if image fails to load
-          e.currentTarget.style.display = 'none'
-          e.currentTarget.nextElementSibling?.classList.remove('hidden')
-        }}
-      />
+      <div className="relative">
+        <img
+          src={logoUrl}
+          alt={chainName}
+          className={`${badgeClass} rounded object-contain bg-white/5 p-1`}
+          onLoad={() => setImageLoaded(true)}
+          onError={() => setImageLoaded(false)}
+          style={{ display: imageLoaded ? 'flex' : 'none' }}
+        />
+        {!imageLoaded && (
+          <div
+            className={badgeClass}
+            style={{
+              backgroundColor: theme.info,
+              color: '#000',
+            }}
+          >
+            {initials}
+          </div>
+        )}
+      </div>
     )
   }
 
-  // Fallback: initials badge
+  // No URL: initials badge only
   return (
     <div
-      className={`${sizeClass} rounded flex items-center justify-center font-bold`}
+      className={badgeClass}
       style={{
         backgroundColor: theme.info,
         color: '#000',
