@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useData, type Chain, type CategoryReview } from '../data/store'
+import { useData } from '../data/store'
 import { TableSkeleton, ErrorBanner } from '../components/States'
 import { theme } from '../theme'
 
@@ -342,7 +342,7 @@ export function ExecutiveSummary() {
         >
           <option value="">All Regions</option>
           {filterOptions.regions.map((r) => (
-            <option key={r} value={r}>
+            <option key={r} value={r || ''}>
               {r}
             </option>
           ))}
@@ -355,7 +355,7 @@ export function ExecutiveSummary() {
         >
           <option value="">All Channels</option>
           {filterOptions.channels.map((c) => (
-            <option key={c} value={c}>
+            <option key={c} value={c || ''}>
               {c}
             </option>
           ))}
@@ -368,7 +368,7 @@ export function ExecutiveSummary() {
         >
           <option value="">All Managers</option>
           {filterOptions.accountManagers.map((m) => (
-            <option key={m} value={m}>
+            <option key={m} value={m || ''}>
               {m}
             </option>
           ))}
@@ -745,8 +745,6 @@ function PipelineFunnel({
     { label: 'Declined', value: declined, color: theme.bad },
     { label: 'Completed', value: completed, color: theme.good },
   ]
-
-  const maxWidth = 100
 
   return (
     <div className="card p-4 space-y-4">

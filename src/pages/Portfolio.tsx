@@ -267,66 +267,6 @@ export function Portfolio() {
   )
 }
 
-function ProductCard({ sku, onClick }: { sku: SkuMeta; onClick: () => void }) {
-  const flavor = sku.flavor ?? sku.sku_code
-  const statusColor = sku.product_status ? STATUS_COLOR[sku.product_status] ?? theme.neutral : null
-
-  return (
-    <button
-      onClick={onClick}
-      className="group text-left card p-3 space-y-2 hover:-translate-y-0.5 transition-transform duration-150"
-    >
-      <div
-        className="relative rounded-lg overflow-hidden border"
-        style={{
-          aspectRatio: skuCanAspect(flavor),
-          backgroundColor: theme.surfaceAlt,
-          borderColor: theme.border,
-          containerType: 'inline-size',
-        }}
-      >
-        {hasSkuCanArt(flavor) ? (
-          <SkuCanImage flavor={flavor} dimmed={false} />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center px-1.5 text-center">
-            <span className="text-xs text-muted">{flavor}</span>
-          </div>
-        )}
-        <div className="absolute top-1.5 left-1.5 flex flex-col gap-1 items-start">
-          {isNew(sku.launch_date) && <Pill color={theme.info}>New</Pill>}
-          {statusColor && <Pill color={statusColor}>{sku.product_status}</Pill>}
-        </div>
-      </div>
-
-      <div>
-        <div className="font-medium text-sm truncate">{flavor}</div>
-        {sku.product_name && (
-          <div className="text-[11px] text-muted truncate">{sku.product_name}</div>
-        )}
-      </div>
-
-      <div className="text-[11px] text-muted space-y-0.5">
-        <div className="flex justify-between">
-          <span>UPC</span>
-          <span className="text-text tabular-nums">{sku.retail_upc ?? '—'}</span>
-        </div>
-        <div className="flex justify-between">
-          <span>SRP</span>
-          <span className="text-text">{fmtUsd(sku.srp)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span>Authorized</span>
-          <span className="text-text">
-            {sku.trackedChainCount > 0
-              ? `${sku.authorizedChainCount}/${sku.trackedChainCount} chains`
-              : '—'}
-          </span>
-        </div>
-      </div>
-    </button>
-  )
-}
-
 function PortfolioTable({
   rows,
   onRowClick,
