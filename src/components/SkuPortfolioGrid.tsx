@@ -51,8 +51,9 @@ export function SkuPortfolioGrid({
         />
       </div>
 
-      {/* Mobile: horizontal scroll carousel. sm+: responsive grid. */}
-      <div className="flex overflow-x-auto gap-3 pb-1 -mx-1 px-1 snap-x snap-mandatory sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+      {/* Always a single row — cards share available width evenly, then
+          scroll horizontally once they hit their minimum legible size. */}
+      <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-1 -mx-1 px-1 snap-x snap-mandatory">
         {ordered.map((s) => (
           <SkuCard key={s.code} sku={s} />
         ))}
@@ -70,7 +71,7 @@ function SkuCard({ sku }: { sku: BattlecardSku }) {
   const statusLabel = authorized ? 'Authorized' : tracked ? 'Not Authorized' : 'No Data'
 
   return (
-    <div className="group relative shrink-0 w-28 sm:w-auto snap-start">
+    <div className="group relative flex-1 basis-0 min-w-[64px] sm:min-w-[76px] snap-start">
       <div
         className="relative rounded-lg overflow-hidden border transition-all duration-150 group-hover:-translate-y-0.5"
         style={{
