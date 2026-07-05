@@ -395,7 +395,7 @@ export function ExecutiveSummary() {
       {/* KPI Row */}
       <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-7">
         <KpiCard label="Total Accounts" value={kpis.totalAccounts} />
-        <KpiCard label="Total Universe" value={kpis.totalUniverse} suffix="Doors" />
+        <KpiCard label="Total Universe" value={kpis.totalUniverse} suffix="Outlets" />
         <KpiCard label="Active Accounts" value={kpis.activeAccounts} detail={`${kpis.activePct}%`} />
         <KpiCard label="Inactive Accounts" value={kpis.inactiveAccounts} detail={`${kpis.inactivePct}%`} />
         <KpiCard label="Reviews Scheduled" value={kpis.categoryReviewsScheduled} color={theme.info} />
