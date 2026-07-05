@@ -220,7 +220,7 @@ export function Portfolio() {
       {filtered.length === 0 ? (
         <EmptyState message="No SKUs match the current filters." />
       ) : view === 'grid' ? (
-        <div className="flex gap-3 overflow-x-auto pb-4">
+        <div className="flex gap-2 overflow-x-auto pb-4">
           {filtered
             .sort((a, b) => {
               const aIdx = PROGRESSION_ORDER.indexOf(a.flavor ?? '')
@@ -231,8 +231,30 @@ export function Portfolio() {
               return 0
             })
             .map((s) => (
-              <div key={s.sku_code} className="flex-shrink-0 w-32">
-                <ProductCard sku={s} onClick={() => setSelected(s)} />
+              <div key={s.sku_code} className="flex-shrink-0" style={{ width: '90px' }}>
+                <button
+                  onClick={() => setSelected(s)}
+                  className="group text-left card p-2 space-y-1.5 hover:-translate-y-0.5 transition-transform duration-150 h-full w-full"
+                >
+                  <div
+                    className="relative rounded-md overflow-hidden border"
+                    style={{
+                      aspectRatio: skuCanAspect(s.flavor ?? s.sku_code),
+                      backgroundColor: theme.surfaceAlt,
+                      borderColor: theme.border,
+                      containerType: 'inline-size',
+                    }}
+                  >
+                    {hasSkuCanArt(s.flavor ?? s.sku_code) ? (
+                      <SkuCanImage flavor={s.flavor ?? s.sku_code} dimmed={false} />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center px-1 text-center">
+                        <span className="text-[9px] text-muted">{s.flavor}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-[9px] text-muted text-center truncate">{s.flavor}</div>
+                </button>
               </div>
             ))}
         </div>
