@@ -69,7 +69,7 @@ export function Shell() {
             />
           </div>
           <div className="text-[11px] text-muted tracking-wide">
-            Sales decision tool
+            AI Mothership
           </div>
         </div>
         <nav className="flex-1 overflow-auto py-2">
