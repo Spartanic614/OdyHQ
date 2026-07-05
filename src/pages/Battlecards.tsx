@@ -3,6 +3,7 @@ import { useData } from '../data/store'
 import { useChainPriorities } from '../data/hooks'
 import { Pill } from '../components/StatusBadge'
 import { SelectFilter, uniqueValues } from '../components/Filters'
+import { SkuPortfolioGrid } from '../components/SkuPortfolioGrid'
 import { TableSkeleton, ErrorBanner, EmptyState } from '../components/States'
 import { fmtInt, fmtUsd } from '../lib/format'
 import { tierColors, theme } from '../theme'
@@ -237,31 +238,7 @@ export function Battlecards() {
             </div>
 
             {/* SKU authorization */}
-            <Panel
-              title={`SKU Authorization — ${skuAuthorized}/${skuTracked} authorized${
-                skuTracked ? ` · ${skuTracked - skuAuthorized} whitespace` : ''
-              }`}
-            >
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                {skuRows.map((s) => {
-                  const ok = s.status === 'Authorized'
-                  const none = s.status === '—'
-                  const color = none ? theme.textMuted : ok ? theme.good : theme.bad
-                  return (
-                    <div
-                      key={s.code}
-                      className="flex items-center gap-2 text-sm rounded px-2 py-1"
-                      style={{ backgroundColor: `${color}14` }}
-                    >
-                      <span style={{ color }} aria-hidden>
-                        {ok ? '✓' : none ? '·' : '✗'}
-                      </span>
-                      <span className="truncate">{s.flavor}</span>
-                    </div>
-                  )
-                })}
-              </div>
-            </Panel>
+            <SkuPortfolioGrid skuRows={skuRows} authorized={skuAuthorized} tracked={skuTracked} />
 
             {/* Anchors */}
             <Panel title="Anchored DCs (unlock leverage)">

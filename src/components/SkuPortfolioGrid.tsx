@@ -1,0 +1,140 @@
+import {
+  PORTFOLIO_IMAGE,
+  PORTFOLIO_IMAGE_HEIGHT,
+  PORTFOLIO_IMAGE_WIDTH,
+  PORTFOLIO_SKUS,
+  portfolioCropFor,
+} from '../config/skuPortfolio'
+import { theme } from '../theme'
+import type { BattlecardSku } from '../lib/battlecardPdf'
+
+// Reference aspect ratio for un-pictured SKUs (variety packs, flavors not yet
+// photographed) so the grid stays visually uniform.
+const FALLBACK_ASPECT = `${PORTFOLIO_SKUS[0].width} / ${PORTFOLIO_IMAGE_HEIGHT}`
+
+export function SkuPortfolioGrid({
+  skuRows,
+  authorized,
+  tracked,
+}: {
+  skuRows: BattlecardSku[]
+  authorized: number
+  tracked: number
+}) {
+  const pictured = skuRows.filter((s) => portfolioCropFor(s.flavor))
+  const unpictured = skuRows.filter((s) => !portfolioCropFor(s.flavor))
+  // Preserve exact portfolio-image order for pictured SKUs; append the rest.
+  const ordered = [
+    ...PORTFOLIO_SKUS.map((p) => pictured.find((s) => s.flavor === p.flavor)).filter(
+      (s): s is BattlecardSku => !!s,
+    ),
+    ...unpictured,
+  ]
+
+  const pct = tracked > 0 ? Math.round((authorized / tracked) * 100) : 0
+
+  return (
+    <div className="card p-4 space-y-3">
+      <div className="flex items-baseline justify-between gap-3">
+        <div className="text-xs font-semibold uppercase tracking-wide text-muted">
+          SKU Authorization
+        </div>
+        <div className="text-sm">
+          <span className="font-semibold text-text">{authorized}</span>
+          <span className="text-muted"> / {tracked} Authorized</span>
+        </div>
+      </div>
+      <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all"
+          style={{ width: `${pct}%`, backgroundColor: theme.good }}
+        />
+      </div>
+
+      {/* Mobile: horizontal scroll carousel. sm+: responsive grid. */}
+      <div className="flex overflow-x-auto gap-3 pb-1 -mx-1 px-1 snap-x snap-mandatory sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+        {ordered.map((s) => (
+          <SkuCard key={s.code} sku={s} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function SkuCard({ sku }: { sku: BattlecardSku }) {
+  const crop = portfolioCropFor(sku.flavor)
+  const authorized = sku.status === 'Authorized'
+  const tracked = sku.status !== '—'
+  const dimmed = !authorized
+
+  const statusLabel = authorized ? 'Authorized' : tracked ? 'Not Authorized' : 'No Data'
+
+  return (
+    <div className="group relative shrink-0 w-28 sm:w-auto snap-start">
+      <div
+        className="relative rounded-lg overflow-hidden border transition-all duration-150 group-hover:-translate-y-0.5"
+        style={{
+          aspectRatio: crop ? `${crop.width} / ${PORTFOLIO_IMAGE_HEIGHT}` : FALLBACK_ASPECT,
+          backgroundColor: theme.surfaceAlt,
+          borderColor: authorized ? `${theme.good}55` : theme.border,
+          boxShadow: authorized
+            ? `0 0 0 1px ${theme.good}33, 0 4px 14px -6px ${theme.good}40`
+            : undefined,
+          containerType: 'inline-size',
+        }}
+      >
+        {crop ? (
+          <img
+            src={PORTFOLIO_IMAGE}
+            alt={sku.flavor}
+            draggable={false}
+            style={{
+              display: 'block',
+              width: `${(PORTFOLIO_IMAGE_WIDTH / crop.width) * 100}cqw`,
+              maxWidth: 'none',
+              height: 'auto',
+              marginLeft: `-${(crop.left / crop.width) * 100}cqw`,
+              filter: dimmed ? 'grayscale(1)' : 'none',
+              opacity: dimmed ? 0.35 : 1,
+              transition: 'opacity 150ms, filter 150ms',
+              userSelect: 'none',
+              pointerEvents: 'none',
+            }}
+          />
+        ) : (
+          <div
+            className="absolute inset-0 flex items-center justify-center text-center px-1.5"
+            style={{
+              filter: dimmed ? 'grayscale(1)' : 'none',
+              opacity: dimmed ? 0.4 : 0.85,
+            }}
+          >
+            <span className="text-[10px] leading-tight text-muted">{sku.flavor}</span>
+          </div>
+        )}
+
+        {/* Status badge */}
+        <div
+          className="absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] leading-none"
+          style={{
+            backgroundColor: authorized ? `${theme.good}` : `${theme.bg}cc`,
+            color: authorized ? theme.bg : theme.textMuted,
+            border: authorized ? 'none' : `1px solid ${theme.border}`,
+          }}
+          aria-hidden
+        >
+          {authorized ? '✓' : tracked ? '✕' : '·'}
+        </div>
+      </div>
+
+      {/* Tooltip */}
+      <div
+        className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 whitespace-nowrap rounded px-2 py-1 text-xs opacity-0 transition-opacity duration-150 group-hover:opacity-100 z-10"
+        style={{ backgroundColor: theme.surfaceAlt, border: `1px solid ${theme.border}` }}
+      >
+        <div className="font-medium text-text">{sku.flavor}</div>
+        <div className="text-muted">{statusLabel}</div>
+      </div>
+    </div>
+  )
+}
