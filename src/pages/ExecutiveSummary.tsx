@@ -206,7 +206,7 @@ export function ExecutiveSummary() {
         id: 'high-value-inactive',
         severity: 'high',
         title: `${highValueInactive.length} high-value accounts inactive`,
-        description: `${highValueInactive.reduce((sum, c) => sum + (c.total_universe ?? 0), 0).toLocaleString()} doors at risk`,
+        description: `${highValueInactive.reduce((sum, c) => sum + (c.total_universe ?? 0), 0).toLocaleString()} outlets at risk`,
       })
     }
 
@@ -301,14 +301,14 @@ export function ExecutiveSummary() {
         <div className="card p-4 bg-gradient-to-r from-accent/10 to-info/10 border border-accent/20">
           <p className="text-sm leading-relaxed">
             Odyssey currently manages <span className="font-semibold">{kpis.totalAccounts} national accounts</span> representing{' '}
-            <span className="font-semibold">{kpis.totalUniverse.toLocaleString()} potential doors</span>. {kpis.activePct}% of accounts
+            <span className="font-semibold">{kpis.totalUniverse.toLocaleString()} potential outlets</span>. {kpis.activePct}% of accounts
             are active. <span className="font-semibold">{channelBreakdown[0]?.name}</span> drives the largest opportunity with{' '}
-            <span className="font-semibold">{channelBreakdown[0]?.universe.toLocaleString()}</span> doors.{' '}
+            <span className="font-semibold">{channelBreakdown[0]?.universe.toLocaleString()}</span> outlets.{' '}
             <span className="font-semibold">{kpis.categoryReviewsScheduled}</span> category reviews are scheduled, while{' '}
             <span className="font-semibold">
               {filteredChains.filter((c) => c.active !== 'Y' && (c.total_universe ?? 0) > 1000).length}
             </span>{' '}
-            high-value accounts ({'>'}1,000 doors) remain inactive—the greatest near-term growth opportunity.
+            high-value accounts ({'>'}1,000 outlets) remain inactive—the greatest near-term growth opportunity.
           </p>
         </div>
       </div>
@@ -483,7 +483,7 @@ export function ExecutiveSummary() {
               <div className="flex justify-between items-center text-sm">
                 <div className="font-semibold">{region.region}</div>
                 <div className="text-xs text-muted">
-                  {region.accounts} accts • {region.universe.toLocaleString()} doors • {Math.round((region.active / region.accounts) * 100)}% active
+                  {region.accounts} accts • {region.universe.toLocaleString()} outlets • {Math.round((region.active / region.accounts) * 100)}% active
                 </div>
               </div>
               <div className="flex gap-2 h-6">
