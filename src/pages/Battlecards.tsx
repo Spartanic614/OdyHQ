@@ -34,7 +34,6 @@ export function Battlecards() {
         .map((r) => [r.sku_code, r.auth_status]),
     )
     return [...skus.rows]
-      .filter((s) => (s.flavor ?? '').toLowerCase().trim() !== 'cherry lime')
       .sort((a, b) => (a.flavor ?? a.sku_code).localeCompare(b.flavor ?? b.sku_code))
       .map((s) => {
         const status = byCode.get(s.sku_code)

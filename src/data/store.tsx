@@ -65,6 +65,14 @@ async function fetchTable<T>(
   return { rows: (data as T[]) ?? [], error: null }
 }
 
+// Retired flavors still on file in dim_sku but no longer sold — hidden from
+// every SKU-driven view (battlecards, heatmap, etc.) rather than filtered
+// per-page.
+const RETIRED_FLAVORS = new Set(['cherry lime', 'classic cola'])
+function dropRetiredSkus(t: TableState<Sku>): TableState<Sku> {
+  return { ...t, rows: t.rows.filter((s) => !RETIRED_FLAVORS.has((s.flavor ?? '').toLowerCase().trim())) }
+}
+
 export function DataProvider({ children }: { children: ReactNode }) {
   const [skus, setSkus] = useState<TableState<Sku>>(empty)
   const [dcs, setDcs] = useState<TableState<Dc>>(empty)
@@ -84,7 +92,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setLoading(true)
     // Each table resolves independently — one failure only degrades its module.
     Promise.allSettled([
-      fetchTable<Sku>('dim_sku').then(setSkus),
+      fetchTable<Sku>('dim_sku').then((t) => setSkus(dropRetiredSkus(t))),
       fetchTable<Dc>('dim_dc').then(setDcs),
       fetchTable<Chain>('dim_chain').then(setChains),
       fetchTable<Prospect>('dim_prospect').then(setProspects),
