@@ -9,7 +9,26 @@
       "mcp__329c417e-84e6-4a37-ac00-08d8ee60bb95__list_tables",
       "mcp__329c417e-84e6-4a37-ac00-08d8ee60bb95__generate_typescript_types",
       "mcp__329c417e-84e6-4a37-ac00-08d8ee60bb95__execute_sql",
-      "mcp__329c417e-84e6-4a37-ac00-08d8ee60bb95__apply_migration"
+      "mcp__329c417e-84e6-4a37-ac00-08d8ee60bb95__apply_migration",
+      "Bash(npm run *)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(npm install *)",
+      "Bash(cp node_modules/us-atlas/counties-10m.json public/us-counties-10m.json)",
+      "Bash(node -e \"const t=require\\('./public/us-counties-10m.json'\\); console.log\\('objects:', Object.keys\\(t.objects\\)\\); const c=t.objects.counties.geometries[0]; console.log\\('sample county geometry id+props:', JSON.stringify\\({id:c.id, props:c.properties}\\)\\);\")",
+      "Bash(mkdir -p public)",
+      "Bash(node -e \"const t=require\\('./public/us-counties-10m.json'\\); console.log\\('objects:', Object.keys\\(t.objects\\)\\); const c=t.objects.counties.geometries[0]; console.log\\('sample county:', JSON.stringify\\({id:c.id, props:c.properties}\\)\\);\")",
+      "Bash(npx --yes vercel whoami)",
+      "Bash(npx --yes vercel login --github)",
+      "Bash(npx --yes vercel --prod --yes)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" https://ody-hq.vercel.app)",
+      "Bash(curl -s https://ody-hq.vercel.app)",
+      "Bash(git check-ignore *)",
+      "Bash(npx --yes vercel git connect)",
+      "Bash(npx --yes vercel ls ody-hq)",
+      "mcp__Claude_in_Chrome__tabs_context_mcp"
     ]
   }
 }

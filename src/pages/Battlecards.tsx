@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useData } from '../data/store'
+import { useData, type Chain, type ChainSkuAuth, type Sku } from '../data/store'
 import { useChainPriorities } from '../data/hooks'
 import { Pill } from '../components/StatusBadge'
 import { SelectFilter, uniqueValues } from '../components/Filters'
@@ -9,10 +9,13 @@ import { tierColors, theme } from '../theme'
 import { AUTH_NOT_AUTHORIZED } from '../config/methodology'
 import { buildBattlecardDoc, type BattlecardData, type BattlecardSku } from '../lib/battlecardPdf'
 
+type BattlecardsTab = 'individual' | 'health'
+
 export function Battlecards() {
   const { chains, categoryReviews, chainSkuAuth, skus, dcs, anchors, loading } = useData()
   const priorities = useChainPriorities()
 
+  const [tab, setTab] = useState<BattlecardsTab>('health')
   const [chainId, setChainId] = useState<string>('')
   const [search, setSearch] = useState('')
   const [am, setAm] = useState('')
@@ -122,14 +125,35 @@ export function Battlecards() {
         <div>
           <h1 className="text-xl font-semibold">Account Battlecards</h1>
           <p className="text-sm text-muted">
-            A meeting-ready one-pager per account. Pick a chain, review, export to PDF.
+            {tab === 'health'
+              ? 'All accounts at a glance. Color-coded by tier and SKU auth health.'
+              : 'A meeting-ready one-pager per account. Pick a chain, review, export to PDF.'}
           </p>
         </div>
-        <button className="btn btn-accent text-sm" onClick={exportPdf} disabled={!chain || exporting}>
-          {exporting ? 'Exporting…' : '⤓ Export PDF'}
-        </button>
+        <div className="flex gap-1">
+          <button
+            className={`btn text-sm ${tab === 'health' ? 'btn-accent' : ''}`}
+            onClick={() => setTab('health')}
+          >
+            Health Scorecard
+          </button>
+          <button
+            className={`btn text-sm ${tab === 'individual' ? 'btn-accent' : ''}`}
+            onClick={() => setTab('individual')}
+          >
+            Battlecard
+          </button>
+          {tab === 'individual' && (
+            <button className="btn btn-accent text-sm" onClick={exportPdf} disabled={!chain || exporting}>
+              {exporting ? 'Exporting…' : '⤓ Export PDF'}
+            </button>
+          )}
+        </div>
       </div>
 
+      {tab === 'health' && <HealthScorecard chains={chains.rows} priorities={priorities} chainSkuAuth={chainSkuAuth.rows} skus={skus.rows} onSelectChain={(id) => { setChainId(id); setTab('individual') }} />}
+
+      {tab === 'individual' && (
       <div className="grid gap-4 lg:grid-cols-[260px_1fr]">
         {/* Chain picker */}
         <div className="card p-2 space-y-2 h-fit">
@@ -256,6 +280,107 @@ export function Battlecards() {
           </div>
         ) : (
           <EmptyState message="Select an account to view its battlecard." />
+        )}
+      </div>
+      )}
+    </div>
+  )
+}
+
+function HealthScorecard({ chains, priorities, chainSkuAuth, skus, onSelectChain }: { chains: Chain[]; priorities: ReturnType<typeof useChainPriorities>; chainSkuAuth: ChainSkuAuth[]; skus: Sku[]; onSelectChain: (id: string) => void }) {
+  if (!priorities.length) {
+    return <EmptyState message="Loading account data…" />
+  }
+
+  const [am, setAm] = useState('')
+  const [search, setSearch] = useState('')
+
+  const pmSku = skus.find((s) => (s.flavor ?? '').toLowerCase().includes('pineapple'))
+
+  const rows = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return priorities
+      .filter((p) => !am || p.chain.account_manager === am)
+      .filter((p) => !q || (p.chain.chain_name ?? p.chain.chain_id).toLowerCase().includes(q))
+      .map((p) => {
+        const skuAuth = chainSkuAuth.filter((r) => r.chain_id === p.chain.chain_id)
+        const tracked = skuAuth.length
+        const authorized = skuAuth.filter((r) => r.auth_status === 'Authorized').length
+        const authRate = tracked > 0 ? authorized / tracked : 0
+        const pmAuth = pmSku ? chainSkuAuth.find((r) => r.chain_id === p.chain.chain_id && r.sku_code === pmSku.sku_code)?.auth_status === 'Authorized' : null
+        return {
+          chain: p.chain,
+          tier: p.tier,
+          score: p.score,
+          authRate,
+          tracked,
+          authorized,
+          pmAuth,
+        }
+      })
+  }, [priorities, am, search, chainSkuAuth, pmSku])
+
+  const authRateColor = (rate: number) =>
+    rate >= 0.8 ? theme.good : rate >= 0.5 ? theme.warn : theme.bad
+
+  return (
+    <div className="space-y-3">
+      <div className="card p-2 flex flex-wrap items-center gap-2">
+        <SelectFilter
+          label="AM"
+          value={am}
+          onChange={setAm}
+          options={uniqueValues(chains, (c) => c.account_manager)}
+        />
+        <input
+          className="input flex-1 min-w-48"
+          placeholder="Search accounts…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <span className="text-xs text-muted px-1">{fmtInt(rows.length)}</span>
+      </div>
+
+      <div className="overflow-auto max-h-[70vh]">
+        {rows.length === 0 ? (
+          <div className="card p-6 text-center text-muted">
+            No accounts match your filters.
+          </div>
+        ) : (
+          <table className="w-full border-collapse text-sm">
+            <thead className="sticky top-0 bg-ink-800">
+              <tr>
+                <th className="th">Account</th>
+                <th className="th">Tier</th>
+                <th className="th text-right">Score</th>
+                <th className="th text-right">SKU Auth %</th>
+                <th className="th text-center">PM Auth</th>
+                <th className="th">AM</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {rows.map((r) => (
+                <tr
+                  key={r.chain.chain_id}
+                  onClick={() => onSelectChain(r.chain.chain_id)}
+                  className="hover:bg-white/5 cursor-pointer transition-colors"
+                >
+                  <td className="td font-medium truncate">{r.chain.chain_name ?? r.chain.chain_id}</td>
+                  <td className="td">
+                    <Pill color={tierColors[r.tier]}>Tier {r.tier}</Pill>
+                  </td>
+                  <td className="td text-right tabular-nums">{r.score.toFixed(0)}</td>
+                  <td className="td text-right tabular-nums" style={{ color: authRateColor(r.authRate) }}>
+                    {(r.authRate * 100).toFixed(0)}%
+                  </td>
+                  <td className="td text-center">
+                    {r.pmAuth === null ? '—' : r.pmAuth ? '✓' : '✗'}
+                  </td>
+                  <td className="td text-muted text-xs">{r.chain.account_manager || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
     </div>
