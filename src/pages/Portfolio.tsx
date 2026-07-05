@@ -77,7 +77,16 @@ export function Portfolio() {
     const q = search.trim().toLowerCase()
     let rows = skuMeta.filter((s) => {
       if (q) {
-        const hay = [s.flavor, s.product_name, s.retail_upc, s.gtin, s.sku_code]
+        const hay = [
+          s.flavor,
+          s.product_name,
+          s.retail_upc,
+          s.gtin,
+          s.sku_code,
+          s.unfi_west_item,
+          s.unfi_east_item,
+          s.kehe_item_number,
+        ]
           .filter(Boolean)
           .join(' ')
           .toLowerCase()
@@ -115,6 +124,9 @@ export function Portfolio() {
         'Package Size': s.package_size,
         UPC: s.retail_upc,
         GTIN: s.gtin,
+        'UNFI West Item #': s.unfi_west_item,
+        'UNFI East Item #': s.unfi_east_item,
+        'KeHE Item #': s.kehe_item_number,
         SRP: s.srp,
         'Dist Case Cost': s.dist_case_cost,
         'Case Dimensions': s.case_dimensions,
@@ -364,6 +376,36 @@ function ProductModal({ sku, onClose }: { sku: SkuMeta; onClose: () => void }) {
       sku.gtin ? (
         <span className="inline-flex items-center gap-2">
           {sku.gtin} <CopyButton value={sku.gtin} label="GTIN" />
+        </span>
+      ) : (
+        '—'
+      ),
+    ],
+    [
+      'UNFI West Item #',
+      sku.unfi_west_item ? (
+        <span className="inline-flex items-center gap-2">
+          {sku.unfi_west_item} <CopyButton value={sku.unfi_west_item} label="UNFI West item #" />
+        </span>
+      ) : (
+        '—'
+      ),
+    ],
+    [
+      'UNFI East Item #',
+      sku.unfi_east_item ? (
+        <span className="inline-flex items-center gap-2">
+          {sku.unfi_east_item} <CopyButton value={sku.unfi_east_item} label="UNFI East item #" />
+        </span>
+      ) : (
+        '—'
+      ),
+    ],
+    [
+      'KeHE Item #',
+      sku.kehe_item_number ? (
+        <span className="inline-flex items-center gap-2">
+          {sku.kehe_item_number} <CopyButton value={sku.kehe_item_number} label="KeHE item #" />
         </span>
       ) : (
         '—'

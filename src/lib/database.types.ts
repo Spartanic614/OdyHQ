@@ -249,6 +249,7 @@ export type Database = {
           dist_case_cost: number | null
           flavor: string | null
           gtin: string | null
+          kehe_item_number: string | null
           launch_date: string | null
           mg: string | null
           notes: string | null
@@ -262,6 +263,8 @@ export type Database = {
           shelf_life: string | null
           sku_code: string
           srp: number | null
+          unfi_east_item: string | null
+          unfi_west_item: string | null
         }
         Insert: {
           case_dimensions?: string | null
@@ -269,6 +272,7 @@ export type Database = {
           dist_case_cost?: number | null
           flavor?: string | null
           gtin?: string | null
+          kehe_item_number?: string | null
           launch_date?: string | null
           mg?: string | null
           notes?: string | null
@@ -282,6 +286,8 @@ export type Database = {
           shelf_life?: string | null
           sku_code: string
           srp?: number | null
+          unfi_east_item?: string | null
+          unfi_west_item?: string | null
         }
         Update: {
           case_dimensions?: string | null
@@ -289,6 +295,7 @@ export type Database = {
           dist_case_cost?: number | null
           flavor?: string | null
           gtin?: string | null
+          kehe_item_number?: string | null
           launch_date?: string | null
           mg?: string | null
           notes?: string | null
@@ -302,6 +309,8 @@ export type Database = {
           shelf_life?: string | null
           sku_code?: string
           srp?: number | null
+          unfi_east_item?: string | null
+          unfi_west_item?: string | null
         }
         Relationships: []
       }
