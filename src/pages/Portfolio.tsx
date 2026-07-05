@@ -28,6 +28,19 @@ const STATUS_COLOR: Record<string, string> = {
   Discontinued: theme.bad,
 }
 
+// Product progression order (matching marketing image)
+const PROGRESSION_ORDER = [
+  'Pineapple Mango',
+  'Blue Raspberry',
+  'Pink Lemonade',
+  'Strawberry Watermelon',
+  'Dragon Fruit Lemonade',
+  'Blackberry Lemonade',
+  'Passion Fruit Guava',
+  'Tropical Breeze',
+  'Mandarin Orange',
+]
+
 const NEW_WINDOW_DAYS = 180
 
 function isNew(launchDate: string | null): boolean {
@@ -207,10 +220,21 @@ export function Portfolio() {
       {filtered.length === 0 ? (
         <EmptyState message="No SKUs match the current filters." />
       ) : view === 'grid' ? (
-        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {filtered.map((s) => (
-            <ProductCard key={s.sku_code} sku={s} onClick={() => setSelected(s)} />
-          ))}
+        <div className="flex gap-3 overflow-x-auto pb-4">
+          {filtered
+            .sort((a, b) => {
+              const aIdx = PROGRESSION_ORDER.indexOf(a.flavor ?? '')
+              const bIdx = PROGRESSION_ORDER.indexOf(b.flavor ?? '')
+              if (aIdx >= 0 && bIdx >= 0) return aIdx - bIdx
+              if (aIdx >= 0) return -1
+              if (bIdx >= 0) return 1
+              return 0
+            })
+            .map((s) => (
+              <div key={s.sku_code} className="flex-shrink-0 w-32">
+                <ProductCard sku={s} onClick={() => setSelected(s)} />
+              </div>
+            ))}
         </div>
       ) : (
         <PortfolioTable rows={filtered} onRowClick={setSelected} />
