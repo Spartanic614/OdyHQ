@@ -57,7 +57,7 @@ export function ExecutiveSummary() {
 
   const kpis = useMemo(() => {
     const total = filteredChains.length
-    const active = filteredChains.filter((c) => c.active === 'Y').length
+    const active = filteredChains.filter((c) => c.active === 'Active').length
     const inactive = total - active
     const universe = filteredChains.reduce((sum, c) => sum + (c.total_universe ?? 0), 0)
 
@@ -107,7 +107,7 @@ export function ExecutiveSummary() {
       const existing = channels.get(ch) || { accounts: 0, universe: 0, active: 0, inactive: 0 }
       existing.accounts++
       existing.universe += c.total_universe ?? 0
-      if (c.active === 'Y') existing.active++
+      if (c.active === 'Active') existing.active++
       else existing.inactive++
       channels.set(ch, existing)
     })
@@ -136,7 +136,7 @@ export function ExecutiveSummary() {
       }
       existing.accounts++
       existing.universe += c.total_universe ?? 0
-      if (c.active === 'Y') existing.active++
+      if (c.active === 'Active') existing.active++
       regions.set(r, existing)
     })
 
@@ -170,7 +170,7 @@ export function ExecutiveSummary() {
       }
       existing.accounts++
       existing.universe += c.total_universe ?? 0
-      if (c.active === 'Y') existing.activePct++
+      if (c.active === 'Active') existing.activePct++
       if ((c.total_universe ?? 0) > existing.largestOpportunity) {
         existing.largestOpportunity = c.total_universe ?? 0
       }
@@ -199,7 +199,7 @@ export function ExecutiveSummary() {
 
     // High-value inactive accounts
     const highValueInactive = filteredChains.filter(
-      (c) => c.active !== 'Y' && (c.total_universe ?? 0) > 1000,
+      (c) => c.active !== 'Active' && (c.total_universe ?? 0) > 1000,
     )
     if (highValueInactive.length > 0) {
       alertsList.push({
@@ -306,7 +306,7 @@ export function ExecutiveSummary() {
             <span className="font-semibold">{channelBreakdown[0]?.universe.toLocaleString()}</span> outlets.{' '}
             <span className="font-semibold">{kpis.categoryReviewsScheduled}</span> category reviews are scheduled, while{' '}
             <span className="font-semibold">
-              {filteredChains.filter((c) => c.active !== 'Y' && (c.total_universe ?? 0) > 1000).length}
+              {filteredChains.filter((c) => c.active !== 'Active' && (c.total_universe ?? 0) > 1000).length}
             </span>{' '}
             high-value accounts ({'>'}1,000 outlets) remain inactive—the greatest near-term growth opportunity.
           </p>
@@ -577,15 +577,15 @@ export function ExecutiveSummary() {
                 <tr
                   key={chain.chain_id}
                   className={`border-b border-ink-700 hover:bg-white/5 ${
-                    chain.active !== 'Y' && (chain.total_universe ?? 0) > 1000 ? 'bg-red-950/20' : ''
+                    chain.active !== 'Active' && (chain.total_universe ?? 0) > 1000 ? 'bg-red-950/20' : ''
                   }`}
                 >
                   <td className="py-2 px-2">{chain.chain_name}</td>
                   <td className="py-2 px-2 text-muted text-xs">{chain.channel}</td>
                   <td className="py-2 px-2 text-right font-medium">{(chain.total_universe ?? 0).toLocaleString()}</td>
                   <td className="py-2 px-2">
-                    <span style={{ color: chain.active === 'Y' ? theme.good : theme.bad }}>
-                      {chain.active === 'Y' ? 'Active' : 'Inactive'}
+                    <span style={{ color: chain.active === 'Active' ? theme.good : theme.bad }}>
+                      {chain.active === 'Active' ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td className="py-2 px-2 text-muted text-xs">{chain.region}</td>
