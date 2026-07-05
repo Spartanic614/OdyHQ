@@ -1,16 +1,7 @@
-import {
-  PORTFOLIO_IMAGE,
-  PORTFOLIO_IMAGE_HEIGHT,
-  PORTFOLIO_IMAGE_WIDTH,
-  PORTFOLIO_SKUS,
-  portfolioCropFor,
-} from '../config/skuPortfolio'
+import { PORTFOLIO_SKUS, portfolioCropFor } from '../config/skuPortfolio'
+import { SkuCanImage, skuCanAspect } from './SkuCan'
 import { theme } from '../theme'
 import type { BattlecardSku } from '../lib/battlecardPdf'
-
-// Reference aspect ratio for un-pictured SKUs (variety packs, flavors not yet
-// photographed) so the grid stays visually uniform.
-const FALLBACK_ASPECT = `${PORTFOLIO_SKUS[0].width} / ${PORTFOLIO_IMAGE_HEIGHT}`
 
 export function SkuPortfolioGrid({
   skuRows,
@@ -75,7 +66,7 @@ function SkuCard({ sku }: { sku: BattlecardSku }) {
       <div
         className="relative rounded-lg overflow-hidden border transition-all duration-150 group-hover:-translate-y-0.5"
         style={{
-          aspectRatio: crop ? `${crop.width} / ${PORTFOLIO_IMAGE_HEIGHT}` : FALLBACK_ASPECT,
+          aspectRatio: skuCanAspect(sku.flavor),
           backgroundColor: theme.surfaceAlt,
           borderColor: authorized ? `${theme.good}55` : theme.border,
           boxShadow: authorized
@@ -85,23 +76,7 @@ function SkuCard({ sku }: { sku: BattlecardSku }) {
         }}
       >
         {crop ? (
-          <img
-            src={PORTFOLIO_IMAGE}
-            alt={sku.flavor}
-            draggable={false}
-            style={{
-              display: 'block',
-              width: `${(PORTFOLIO_IMAGE_WIDTH / crop.width) * 100}cqw`,
-              maxWidth: 'none',
-              height: 'auto',
-              marginLeft: `-${(crop.left / crop.width) * 100}cqw`,
-              filter: dimmed ? 'grayscale(1)' : 'none',
-              opacity: dimmed ? 0.35 : 1,
-              transition: 'opacity 150ms, filter 150ms',
-              userSelect: 'none',
-              pointerEvents: 'none',
-            }}
-          />
+          <SkuCanImage flavor={sku.flavor} dimmed={dimmed} />
         ) : (
           <div
             className="absolute inset-0 flex items-center justify-center text-center px-1.5"

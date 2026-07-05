@@ -6,6 +6,7 @@ import { DcDrawer, ChainDrawer } from '../components/drawers'
 import { AuthBadge, Pill } from '../components/StatusBadge'
 import { SelectFilter, uniqueValues } from '../components/Filters'
 import { TableSkeleton, ErrorBanner, EmptyState } from '../components/States'
+import { SkuCanImage, hasSkuCanArt, skuCanAspect } from '../components/SkuCan'
 import { fmtInt } from '../lib/format'
 import { tierColors, theme } from '../theme'
 import type { SkuOpportunity } from '../data/selectors'
@@ -164,7 +165,7 @@ function Heatmap({ onPick }: { onPick: (dc: string) => void }) {
                         cell?.moq != null ? `MOQ ${cell.moq}` : undefined
                       }
                     >
-                      <Cell status={cell?.status ?? undefined} />
+                      <Cell status={cell?.status ?? undefined} flavor={s.flavor ?? s.sku_code} />
                     </td>
                   )
                 })}
@@ -177,19 +178,39 @@ function Heatmap({ onPick }: { onPick: (dc: string) => void }) {
   )
 }
 
-function Cell({ status }: { status?: string }) {
+function Cell({ status, flavor }: { status?: string; flavor: string }) {
   if (status == null)
     return <span className="inline-block w-5 text-ink-500">·</span>
+
   const notAuth = status === AUTH_NOT_AUTHORIZED
+  const authorized = !notAuth
+
+  if (!hasSkuCanArt(flavor)) {
+    return (
+      <span
+        className="inline-flex items-center justify-center w-6 h-6 text-[11px] font-bold"
+        style={{
+          color: notAuth ? theme.bad : theme.good,
+          backgroundColor: notAuth ? `${theme.bad}22` : `${theme.good}1a`,
+        }}
+      >
+        {notAuth ? '✗' : '✓'}
+      </span>
+    )
+  }
+
   return (
     <span
-      className="inline-flex items-center justify-center w-6 h-6 text-[11px] font-bold"
+      className="inline-block rounded overflow-hidden align-middle"
+      title={`${flavor} — ${authorized ? 'Authorized' : 'Not Authorized'}`}
       style={{
-        color: notAuth ? theme.bad : theme.good,
-        backgroundColor: notAuth ? `${theme.bad}22` : `${theme.good}1a`,
+        width: 22,
+        aspectRatio: skuCanAspect(flavor),
+        containerType: 'inline-size',
+        boxShadow: authorized ? `0 0 0 1px ${theme.good}88` : `0 0 0 1px ${theme.border}`,
       }}
     >
-      {notAuth ? '✗' : '✓'}
+      <SkuCanImage flavor={flavor} dimmed={!authorized} />
     </span>
   )
 }
@@ -197,8 +218,14 @@ function Cell({ status }: { status?: string }) {
 function Legend() {
   return (
     <div className="flex items-center gap-3 text-xs text-muted pr-2">
-      <span style={{ color: theme.good }}>✓ Authorized</span>
-      <span style={{ color: theme.bad }}>✗ Not Authorized</span>
+      <span>
+        <span className="inline-block w-2 h-2 rounded-full align-middle mr-1" style={{ backgroundColor: theme.good }} />
+        Full color = Authorized
+      </span>
+      <span>
+        <span className="inline-block w-2 h-2 rounded-full align-middle mr-1" style={{ backgroundColor: theme.textMuted }} />
+        Grayscale = Not Authorized
+      </span>
       <span className="text-ink-500">· n/a</span>
     </div>
   )
