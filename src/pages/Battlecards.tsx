@@ -4,6 +4,7 @@ import { useChainPriorities } from '../data/hooks'
 import { Pill } from '../components/StatusBadge'
 import { SelectFilter, uniqueValues } from '../components/Filters'
 import { SkuPortfolioGrid } from '../components/SkuPortfolioGrid'
+import { RetailerLogo } from '../components/RetailerLogo'
 import { TableSkeleton, ErrorBanner, EmptyState } from '../components/States'
 import { fmtInt, fmtUsd } from '../lib/format'
 import { tierColors, theme } from '../theme'
@@ -187,10 +188,13 @@ export function Battlecards() {
             {/* Header */}
             <div className="card p-4">
               <div className="flex items-start justify-between gap-3 flex-wrap">
-                <div>
-                  <div className="text-2xl font-bold">{chain.chain_name ?? chain.chain_id}</div>
-                  <div className="text-sm text-muted mt-0.5">
-                    {[chain.channel, chain.region, chain.state].filter(Boolean).join(' · ') || '—'}
+                <div className="flex items-start gap-3">
+                  <RetailerLogo chainName={chain.chain_name ?? chain.chain_id} size="lg" />
+                  <div>
+                    <div className="text-2xl font-bold">{chain.chain_name ?? chain.chain_id}</div>
+                    <div className="text-sm text-muted mt-0.5">
+                      {[chain.channel, chain.region, chain.state].filter(Boolean).join(' · ') || '—'}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
