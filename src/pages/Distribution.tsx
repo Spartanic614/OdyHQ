@@ -204,6 +204,7 @@ function Cell({ status, flavor }: { status?: string; flavor: string }) {
       className="inline-block rounded overflow-hidden align-middle"
       title={`${flavor} — ${authorized ? 'Authorized' : 'Not Authorized'}`}
       style={{
+        position: 'relative',
         width: 22,
         aspectRatio: skuCanAspect(flavor),
         containerType: 'inline-size',

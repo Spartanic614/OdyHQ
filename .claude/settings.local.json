@@ -32,7 +32,8 @@
       "Bash(curl -sI \"http://localhost:5173/222%20Variety%20Pack.jpg\")",
       "Bash(curl -sI \"http://localhost:5173/85%20Variety%20Pack.png\")",
       "Bash(npx tsc *)",
-      "Bash(git commit -m 'Fix variety pack label to use extracted SKU number instead of exact match *)"
+      "Bash(git commit -m 'Fix variety pack label to use extracted SKU number instead of exact match *)",
+      "Bash(git commit -m 'Fix Distribution heatmap can images broken by SkuCanImage position change *)"
     ]
   }
 }
