@@ -286,9 +286,9 @@ function ManagerDetailView({ manager, chains, categoryReviews, onClose }: Manage
 
   const mostWanted = useMemo(() => {
     return managerChains
-      .filter((c) => c.active === 'Not Active' && (c.total_universe ?? 0) >= 1000)
+      .filter((c) => c.active === 'Not Active' && (!c.distributor || c.distributor.trim() === ''))
       .sort((a, b) => (b.total_universe ?? 0) - (a.total_universe ?? 0))
-      .slice(0, 10)
+      .slice(0, 5)
   }, [managerChains])
 
   const noReviewYet = useMemo(() => {
@@ -407,7 +407,7 @@ function ManagerDetailView({ manager, chains, categoryReviews, onClose }: Manage
 
       {/* Most Wanted Accounts */}
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-text">Most Wanted Accounts (+1,000 outlets, No Distribution)</h2>
+        <h2 className="text-lg font-semibold text-text">Most Wanted Accounts (Top 5 Inactive, No Distribution)</h2>
         <div className="card overflow-hidden">
           <div className="overflow-auto">
             <table className="w-full border-collapse text-sm">
