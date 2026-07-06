@@ -138,7 +138,7 @@ export function ExecutiveSummary() {
                   <span>{ch.accounts}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted">Universe</span>
+                  <span className="text-muted">Outlets</span>
                   <span className="font-medium">{fmtInt(ch.universe)}</span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -185,7 +185,7 @@ export function ExecutiveSummary() {
                   <span className="font-medium">{manager.accounts}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted">Universe</span>
+                  <span className="text-muted">Outlets</span>
                   <span className="font-medium">{fmtInt(manager.universe)}</span>
                 </div>
                 <div className="flex justify-between">
