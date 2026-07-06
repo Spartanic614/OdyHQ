@@ -134,16 +134,24 @@ export function ExecutiveSummary() {
               <div className="font-semibold text-sm">{ch.name}</div>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted">Accounts</span>
-                  <span>{ch.accounts}</span>
+                  <span className="text-muted">Total Chains</span>
+                  <span className="font-medium">{ch.accounts}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted">Outlets</span>
-                  <span className="font-medium">{fmtInt(ch.universe)}</span>
+                  <span className="text-muted">Our Chains</span>
+                  <span className="font-medium" style={{ color: theme.good }}>
+                    {ch.active}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-muted">Active</span>
-                  <ProgressBar value={ch.activePct} color={theme.good} />
+                  <span className="text-muted">Penetration</span>
+                  <span className="font-semibold" style={{ color: theme.good }}>
+                    {ch.activePct}%
+                  </span>
+                </div>
+                <div className="border-t border-white/10 pt-2 flex justify-between">
+                  <span className="text-muted text-xs">Outlets</span>
+                  <span className="font-medium text-xs">{fmtInt(ch.universe)}</span>
                 </div>
               </div>
             </div>
