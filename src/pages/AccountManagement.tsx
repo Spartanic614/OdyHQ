@@ -267,10 +267,12 @@ function MostWanted({ onPick }: { onPick: (id: string) => void }) {
   const [search, setSearch] = useState('')
 
   // Outlet count = dim_chain.total_universe; channel split via channelGroup().
-  // Rank by: 1. Active status (Active first), 2. Total Universe (descending).
+  // Show only inactive accounts with no distribution, ranked by outlet count descending.
   const base = useMemo(
     () =>
       chains.rows
+        .filter((c) => c.active === 'Not Active')
+        .filter((c) => !c.distributor || c.distributor.trim() === '')
         .filter((c) => (c.total_universe ?? 0) > 0)
         .filter((c) => !am || c.account_manager === am)
         .filter((c) =>
@@ -280,14 +282,7 @@ function MostWanted({ onPick }: { onPick: (id: string) => void }) {
                 .toLowerCase()
                 .includes(search.toLowerCase()),
         )
-        .sort((a, b) => {
-          // Active status priority: 'Active' first, then 'Not Active' or null.
-          const aActive = a.active === 'Active' ? 1 : 0
-          const bActive = b.active === 'Active' ? 1 : 0
-          if (aActive !== bActive) return bActive - aActive
-          // Within same status, sort by total_universe descending.
-          return (b.total_universe ?? 0) - (a.total_universe ?? 0)
-        }),
+        .sort((a, b) => (b.total_universe ?? 0) - (a.total_universe ?? 0)),
     [chains.rows, am, search],
   )
 

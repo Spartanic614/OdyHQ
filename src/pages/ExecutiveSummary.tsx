@@ -58,7 +58,7 @@ export function ExecutiveSummary() {
   const kpis = useMemo(() => {
     const total = filteredChains.length
     const active = filteredChains.filter((c) => c.active === 'Active').length
-    const inactive = total - active
+    const inactive = filteredChains.filter((c) => c.active === 'Not Active').length
     const universe = filteredChains.reduce((sum, c) => sum + (c.total_universe ?? 0), 0)
 
     const categoryReviewsScheduled = categoryReviews.rows.filter(
@@ -85,6 +85,7 @@ export function ExecutiveSummary() {
         filteredChains.some((c) => c.chain_id === cr.chain_id),
     ).length
 
+    const statusTotal = active + inactive
     return {
       totalAccounts: total,
       totalUniverse: universe,
@@ -94,8 +95,8 @@ export function ExecutiveSummary() {
       meetingsPending,
       declinedReviews,
       completedReviews,
-      activePct: total > 0 ? Math.round((active / total) * 100) : 0,
-      inactivePct: total > 0 ? Math.round((inactive / total) * 100) : 0,
+      activePct: statusTotal > 0 ? Math.round((active / statusTotal) * 100) : 0,
+      inactivePct: statusTotal > 0 ? Math.round((inactive / statusTotal) * 100) : 0,
     }
   }, [filteredChains, categoryReviews.rows])
 
@@ -673,42 +674,53 @@ function DonutChart({
   centerText: string
 }) {
   const total = data.reduce((sum, d) => sum + d.value, 0)
-  const radius = 40
-  const circumference = 2 * Math.PI * radius
+  const cx = 80
+  const cy = 80
+  const outerRadius = 50
+  const innerRadius = 30
 
-  let cumulativeValue = 0
+  let startAngle = -Math.PI / 2
   const segments = data.map((d) => {
     const percentage = d.value / total
-    const strokeDashlength = circumference * percentage
-    const strokeDashoffset = -(circumference * (cumulativeValue / total))
-    const rotation = (cumulativeValue / total) * 360
-    cumulativeValue += d.value
-    return { ...d, strokeDashlength, strokeDashoffset, rotation }
+    const endAngle = startAngle + percentage * 2 * Math.PI
+    const segment = { ...d, startAngle, endAngle }
+    startAngle = endAngle
+    return segment
   })
+
+  const describeArc = (
+    cx: number,
+    cy: number,
+    radius: number,
+    startAngle: number,
+    endAngle: number,
+  ) => {
+    const start = {
+      x: cx + radius * Math.cos(startAngle),
+      y: cy + radius * Math.sin(startAngle),
+    }
+    const end = {
+      x: cx + radius * Math.cos(endAngle),
+      y: cy + radius * Math.sin(endAngle),
+    }
+    const largeArc = endAngle - startAngle > Math.PI ? 1 : 0
+    return `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 1 ${end.x} ${end.y}`
+  }
 
   return (
     <div className="flex flex-col items-center gap-3">
-      <svg width="160" height="160" viewBox="0 0 160 160" className="transform -rotate-90">
-        <circle cx="80" cy="80" r={radius} fill="none" stroke="#1f2937" strokeWidth="20" />
-        {segments.map((segment, i) => (
-          <circle
-            key={i}
-            cx="80"
-            cy="80"
-            r={radius}
-            fill="none"
-            stroke={segment.color}
-            strokeWidth="20"
-            strokeDasharray={segment.strokeDashlength}
-            strokeDashoffset={segment.strokeDashoffset}
-            style={{
-              opacity: 0.9,
-            }}
-          />
-        ))}
-        <text x="80" y="80" textAnchor="middle" dominantBaseline="middle" className="text-xs font-bold fill-text" fontSize="12">
+      <svg width="160" height="160" viewBox="0 0 160 160">
+        {segments.map((segment, i) => {
+          const outerArc = describeArc(cx, cy, outerRadius, segment.startAngle, segment.endAngle)
+          const innerArc = describeArc(cx, cy, innerRadius, segment.endAngle, segment.startAngle)
+          const pathData = `${outerArc} L ${cx + innerRadius * Math.cos(segment.endAngle)} ${cy + innerRadius * Math.sin(segment.endAngle)} ${innerArc} Z`
+          return (
+            <path key={i} d={pathData} fill={segment.color} opacity={0.9} />
+          )
+        })}
+        <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle" className="text-xs font-bold fill-text" fontSize="12">
           {centerText.split('\n').map((line, i) => (
-            <tspan key={i} x="80" dy={i === 0 ? 0 : '14'}>
+            <tspan key={i} x={cx} dy={i === 0 ? 0 : '14'}>
               {line}
             </tspan>
           ))}
