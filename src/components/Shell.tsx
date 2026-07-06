@@ -6,6 +6,7 @@ import { useLocalStorage } from '../lib/useLocalStorage'
 import { ErrorBoundary } from './ErrorBoundary'
 
 const DEFAULT_NAV = [
+  { to: '/executive-summary', label: 'Executive Summary' },
   { to: '/accounts', label: 'Account Management' },
   { to: '/battlecards', label: 'Battlecards' },
   { to: '/portfolio', label: 'Portfolio' },
