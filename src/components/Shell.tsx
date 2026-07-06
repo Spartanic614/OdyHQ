@@ -59,8 +59,8 @@ export function Shell() {
 
   return (
     <div className="flex h-full">
-      <aside className="w-56 shrink-0 bg-black flex flex-col">
-        <div className="px-4 py-3 border-b border-gray-800 space-y-2">
+      <aside className="w-56 shrink-0 glass-nav border-r border-white/10 flex flex-col">
+        <div className="px-4 py-3 border-b border-white/10 space-y-2">
           <div className="bg-white rounded p-2">
             <img
               src="/Odyssey_Logo_FUNCTIONAL.png"
@@ -68,7 +68,7 @@ export function Shell() {
               className="h-16 w-auto"
             />
           </div>
-          <div className="text-[11px] text-gray-400 tracking-wide">
+          <div className="text-[11px] text-muted tracking-wide">
             AI Mothership
           </div>
         </div>
@@ -97,15 +97,15 @@ export function Shell() {
                 onDrop(n.to)
                 setOverTo(null)
               }}
-              className={`group relative ${overTo === n.to && dragTo !== n.to ? 'bg-gray-800' : ''}`}
+              className={`group relative ${overTo === n.to && dragTo !== n.to ? 'bg-accent/10' : ''}`}
             >
               <NavLink
                 to={n.to}
                 className={({ isActive }) =>
                   `block px-4 py-2 text-sm border-l-2 transition-colors cursor-grab active:cursor-grabbing ${
                     isActive
-                      ? 'border-blue-500 bg-gray-900 text-white font-medium'
-                      : 'border-transparent text-gray-400 hover:text-white hover:bg-gray-800'
+                      ? 'border-accent bg-white/10 text-text'
+                      : 'border-transparent text-muted hover:text-text hover:bg-white/5'
                   } ${dragTo === n.to ? 'opacity-40' : ''}`
                 }
               >

@@ -1,23 +1,23 @@
 // ============================================================
 // Brand palette — single source of truth (mirrors tailwind.config.js).
-// Aesthetic: Clean modern interface with grey background and white cards.
+// Aesthetic: futuristic "Apple Glass" — graphite, steel, silver.
 // Swap the brand by editing these values + the tailwind mirror.
 // ============================================================
 
 export const theme = {
-  // Surfaces (light grey background with white cards)
-  bg: '#f3f4f6',
-  surface: '#ffffff',
-  surfaceAlt: '#f9fafb',
-  border: '#e5e7eb',
+  // Surfaces (graphite base; glass translucency handled in index.css)
+  bg: '#0a0c0f',
+  surface: '#13161b',
+  surfaceAlt: '#1b1f26',
+  border: '#2a2f38',
 
-  // Text (dark for light backgrounds)
-  text: '#1f2937',
-  textMuted: '#6b7280',
+  // Text
+  text: '#eceef1',
+  textMuted: '#959dab',
 
-  // Brand accent — blue
-  accent: '#3b82f6',
-  accentSoft: '#dbeafe',
+  // Brand accent — polished silver / steel
+  accent: '#c2cad4',
+  accentSoft: '#2b313a',
 
   // Semantic — never encode status by color alone; pair with icon + label.
   good: '#34d399', // Authorized
