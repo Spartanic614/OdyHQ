@@ -240,8 +240,8 @@ export function Portfolio() {
                     className="relative rounded-md overflow-hidden border"
                     style={{
                       aspectRatio: skuCanAspect(s.flavor ?? s.sku_code),
-                      backgroundColor: theme.surfaceAlt,
-                      borderColor: theme.border,
+                      backgroundColor: '#000000',
+                      borderColor: '#1f2937',
                       containerType: 'inline-size',
                     }}
                   >
