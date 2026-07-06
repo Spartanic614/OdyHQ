@@ -220,7 +220,7 @@ export function Portfolio() {
       {filtered.length === 0 ? (
         <EmptyState message="No SKUs match the current filters." />
       ) : view === 'grid' ? (
-        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 pb-4">
+        <div className="grid gap-2 grid-cols-9 pb-4">
           {filtered
             .sort((a, b) => {
               const aIdx = PROGRESSION_ORDER.indexOf(a.flavor ?? '')
