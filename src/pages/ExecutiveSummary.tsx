@@ -300,7 +300,7 @@ export function ExecutiveSummary() {
         <h1 className="text-3xl font-bold">Executive Summary</h1>
         <div className="card p-4 bg-gradient-to-r from-accent/10 to-info/10 border border-accent/20">
           <p className="text-sm leading-relaxed">
-            Odyssey currently manages <span className="font-semibold">{kpis.totalAccounts} national accounts</span> representing{' '}
+            Odyssey currently manages <span className="font-semibold">{kpis.totalAccounts} key accounts</span> representing{' '}
             <span className="font-semibold">{kpis.totalUniverse.toLocaleString()} potential outlets</span>. {kpis.activePct}% of accounts
             are active. <span className="font-semibold">{channelBreakdown[0]?.name}</span> drives the largest opportunity with{' '}
             <span className="font-semibold">{channelBreakdown[0]?.universe.toLocaleString()}</span> outlets.{' '}
