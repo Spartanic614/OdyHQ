@@ -424,8 +424,8 @@ export function ExecutiveSummary() {
             data={channelBreakdown.map((c) => ({
               name: c.name,
               value: c.accounts,
-              color: ['#10b981', '#3b82f6', '#f59e0b', '#6b7280'][
-                channelBreakdown.indexOf(c) % 4
+              color: ['#10b981', '#3b82f6', '#f59e0b', '#6b7280', '#ec4899', '#8b5cf6', '#06b6d4', '#f97316'][
+                channelBreakdown.indexOf(c) % 8
               ] as string,
             }))}
             centerText={`${kpis.totalAccounts}\nAccounts`}
