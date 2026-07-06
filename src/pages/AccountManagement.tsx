@@ -24,13 +24,47 @@ const MEETING_OPTIONS = [
 type Tab = 'tracker' | 'hitlist' | 'mostwanted' | 'authgap'
 
 export function AccountManagement() {
+  const { chains } = useData()
   const [tab, setTab] = useState<Tab>('tracker')
   const [chainId, setChainId] = useState<string | null>(null)
+  const [selectedManager, setSelectedManager] = useState<string | null>(null)
+
+  const managerMetrics = useMemo(() => {
+    const managers = new Map<string, { accounts: number; universe: number; active: number }>()
+
+    chains.rows.forEach((c) => {
+      const m = c.account_manager || 'Unassigned'
+      const existing = managers.get(m) || { accounts: 0, universe: 0, active: 0 }
+      existing.accounts++
+      existing.universe += c.total_universe ?? 0
+      if (c.active === 'Active') existing.active++
+      managers.set(m, existing)
+    })
+
+    return Array.from(managers.entries())
+      .map(([name, data]) => ({
+        name,
+        ...data,
+        activePct: data.accounts > 0 ? Math.round((data.active / data.accounts) * 100) : 0,
+      }))
+      .sort((a, b) => b.universe - a.universe)
+  }, [chains.rows])
+
+  // Show manager detail view if selected
+  if (selectedManager) {
+    return (
+      <ManagerDetailView
+        manager={selectedManager}
+        chains={chains.rows}
+        onClose={() => setSelectedManager(null)}
+      />
+    )
+  }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Account Management Mothership</h1>
+        <h1 className="text-xl font-semibold">Account Manager Summary</h1>
         <div className="flex gap-1">
           <button
             className={`btn text-sm ${tab === 'tracker' ? 'btn-accent' : ''}`}
@@ -58,6 +92,38 @@ export function AccountManagement() {
           </button>
         </div>
       </div>
+
+      {/* Account Manager Scorecard */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">Account Manager Performance</h2>
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          {managerMetrics.map((manager) => (
+            <button
+              key={manager.name}
+              onClick={() => setSelectedManager(manager.name)}
+              className="card p-4 space-y-3 hover:bg-white/10 transition-colors text-left"
+            >
+              <div className="font-semibold text-sm truncate">{manager.name}</div>
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted">Accounts</span>
+                  <span className="font-medium">{manager.accounts}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted">Outlets</span>
+                  <span className="font-medium">{fmtInt(manager.universe)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted">Active</span>
+                  <span className="font-medium" style={{ color: theme.good }}>
+                    {manager.activePct}%
+                  </span>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </section>
 
       {tab === 'tracker' && <Tracker onPick={setChainId} />}
       {tab === 'hitlist' && <HitList onPick={setChainId} />}
@@ -544,6 +610,264 @@ function PineappleMangoGap({ onPick }: { onPick: (id: string) => void }) {
           />
         </>
       )}
+    </div>
+  )
+}
+
+interface ManagerDetailViewProps {
+  manager: string
+  chains: any[]
+  onClose: () => void
+}
+
+function ManagerDetailView({ manager, chains, onClose }: ManagerDetailViewProps) {
+  const { categoryReviews } = useData()
+  const managerChains = useMemo(() => chains.filter((c) => c.account_manager === manager), [chains, manager])
+
+  const top5Active = useMemo(() => {
+    return managerChains
+      .filter((c) => c.active === 'Active')
+      .sort((a, b) => (b.total_universe ?? 0) - (a.total_universe ?? 0))
+      .slice(0, 5)
+  }, [managerChains])
+
+  const mostWanted = useMemo(() => {
+    return managerChains
+      .filter((c) => c.active === 'Not Active' && (!c.distributor || c.distributor.trim() === ''))
+      .sort((a, b) => (b.total_universe ?? 0) - (a.total_universe ?? 0))
+      .slice(0, 5)
+  }, [managerChains])
+
+  const noReviewYet = useMemo(() => {
+    const reviewed = new Set(categoryReviews.rows.map((cr) => cr.chain_id))
+    return managerChains.filter((c) => !reviewed.has(c.chain_id))
+  }, [managerChains, categoryReviews.rows])
+
+  const channelBreakdown = useMemo(() => {
+    const channels = new Map<string, { count: number; outlets: number; active: number }>()
+    managerChains.forEach((c) => {
+      const ch = channelGroup(c.channel) || 'Unknown'
+      const existing = channels.get(ch) || { count: 0, outlets: 0, active: 0 }
+      existing.count++
+      existing.outlets += c.total_universe ?? 0
+      if (c.active === 'Active') existing.active++
+      channels.set(ch, existing)
+    })
+    return Array.from(channels.entries())
+      .map(([name, data]) => ({ name, ...data }))
+      .sort((a, b) => b.outlets - a.outlets)
+  }, [managerChains])
+
+  const summary = useMemo(() => {
+    const total = managerChains.length
+    const active = managerChains.filter((c) => c.active === 'Active').length
+    const outlets = managerChains.reduce((sum, c) => sum + (c.total_universe ?? 0), 0)
+    const activeOutlets = managerChains
+      .filter((c) => c.active === 'Active')
+      .reduce((sum, c) => sum + (c.total_universe ?? 0), 0)
+    const topChannel = channelBreakdown[0]
+
+    return {
+      totalAccounts: total,
+      activeAccounts: active,
+      inactiveAccounts: total - active,
+      totalOutlets: outlets,
+      activeOutlets,
+      activePct: total > 0 ? Math.round((active / total) * 100) : 0,
+      topChannel: topChannel?.name || 'N/A',
+      topChannelOutlets: topChannel?.outlets || 0,
+    }
+  }, [managerChains, channelBreakdown])
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between sticky top-0 bg-gradient-to-b from-[#0a0c0f] to-transparent pb-4 z-10">
+        <h1 className="text-2xl font-semibold text-text">{manager}</h1>
+        <button
+          onClick={onClose}
+          className="btn text-sm"
+        >
+          ← Back
+        </button>
+      </div>
+
+      {/* Business Summary */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold text-text">Business Summary</h2>
+        <div className="card p-4 space-y-4">
+          <p className="text-sm text-muted">
+            {manager} manages <span className="font-semibold text-text">{summary.totalAccounts} accounts</span> across{' '}
+            <span className="font-semibold text-text">{fmtInt(summary.totalOutlets)} outlets</span>. Currently active in{' '}
+            <span style={{ color: theme.good }} className="font-semibold">
+              {summary.activeAccounts} chains ({summary.activePct}%)
+            </span>
+            , with <span className="font-semibold">{summary.inactiveAccounts}</span> inactive opportunities. The portfolio
+            is dominated by <span className="font-semibold">{summary.topChannel}</span> with{' '}
+            <span className="font-semibold">{fmtInt(summary.topChannelOutlets)}</span> outlets.
+          </p>
+
+          <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
+            <Kpi label="Total Accounts" value={summary.totalAccounts} />
+            <Kpi label="Active" value={summary.activeAccounts} color={theme.good} />
+            <Kpi label="Inactive" value={summary.inactiveAccounts} color={theme.bad} />
+            <Kpi label="Total Outlets" value={fmtInt(summary.totalOutlets)} />
+          </div>
+        </div>
+      </section>
+
+      {/* Top 5 Active Accounts */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold text-text">Top 5 Active Accounts (by Outlets)</h2>
+        <div className="card overflow-hidden">
+          <div className="overflow-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead className="sticky top-0 bg-ink-800">
+                <tr>
+                  <th className="th">Chain</th>
+                  <th className="th text-right">Outlets</th>
+                  <th className="th">Region</th>
+                  <th className="th">Channel</th>
+                </tr>
+              </thead>
+              <tbody>
+                {top5Active.length > 0 ? (
+                  top5Active.map((c) => (
+                    <tr key={c.chain_id} className="bg-good/5">
+                      <td className="td font-medium">{c.chain_name || c.chain_id}</td>
+                      <td className="td text-right font-semibold">{fmtInt(c.total_universe ?? 0)}</td>
+                      <td className="td text-muted">{c.region}</td>
+                      <td className="td text-muted">{c.channel}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td className="td text-muted" colSpan={4}>
+                      No active accounts
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* Most Wanted Accounts */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold text-text">Most Wanted Accounts (Top 5 Inactive, No Distribution)</h2>
+        <div className="card overflow-hidden">
+          <div className="overflow-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead className="sticky top-0 bg-ink-800">
+                <tr>
+                  <th className="th">Chain</th>
+                  <th className="th text-right">Outlets</th>
+                  <th className="th">Region</th>
+                  <th className="th">Channel</th>
+                </tr>
+              </thead>
+              <tbody>
+                {mostWanted.length > 0 ? (
+                  mostWanted.map((c) => (
+                    <tr key={c.chain_id} className="bg-warn/5">
+                      <td className="td font-medium">{c.chain_name || c.chain_id}</td>
+                      <td className="td text-right font-semibold">{fmtInt(c.total_universe ?? 0)}</td>
+                      <td className="td text-muted">{c.region}</td>
+                      <td className="td text-muted">{c.channel}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td className="td text-muted" colSpan={4}>
+                      No high-value inactive accounts
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* No Review Yet */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold text-text">Accounts Without Category Reviews</h2>
+        <div className="card overflow-hidden">
+          <div className="overflow-auto max-h-[50vh]">
+            <table className="w-full border-collapse text-sm">
+              <thead className="sticky top-0 bg-ink-800">
+                <tr>
+                  <th className="th">Chain</th>
+                  <th className="th text-right">Outlets</th>
+                  <th className="th">Status</th>
+                  <th className="th">Channel</th>
+                </tr>
+              </thead>
+              <tbody>
+                {noReviewYet.length > 0 ? (
+                  noReviewYet.map((c) => (
+                    <tr key={c.chain_id}>
+                      <td className="td font-medium">{c.chain_name || c.chain_id}</td>
+                      <td className="td text-right">{fmtInt(c.total_universe ?? 0)}</td>
+                      <td className="td">
+                        <span style={{ color: c.active === 'Active' ? theme.good : theme.bad }}>
+                          {c.active}
+                        </span>
+                      </td>
+                      <td className="td text-muted">{c.channel}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td className="td text-muted" colSpan={4}>
+                      All accounts have category reviews scheduled or completed! 🎉
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* Channel Breakdown */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold text-text">Portfolio by Channel</h2>
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          {channelBreakdown.map((ch) => (
+            <div key={ch.name} className="card p-4 space-y-2">
+              <div className="font-semibold text-sm">{ch.name}</div>
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted">Accounts</span>
+                  <span className="font-medium">{ch.count}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted">Outlets</span>
+                  <span className="font-medium">{fmtInt(ch.outlets)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted">Active</span>
+                  <span className="font-medium" style={{ color: theme.good }}>
+                    {ch.active}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function Kpi({ label, value, color }: { label: string; value: string | number; color?: string }) {
+  return (
+    <div className="card p-3">
+      <div className="text-xl font-semibold" style={color ? { color } : undefined}>
+        {value}
+      </div>
+      <div className="text-xs text-muted">{label}</div>
     </div>
   )
 }
