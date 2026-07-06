@@ -115,6 +115,17 @@ export function DsdCoverage() {
     [rows, state, distributor, coverage],
   )
 
+  const stateDistributors = useMemo(() => {
+    const m = new Map<string, Set<string>>()
+    for (const r of rows) {
+      if (!isCovered(r) || !r.state) continue
+      const dists = m.get(r.state) ?? new Set()
+      dists.add(r.distributor as string)
+      m.set(r.state, dists)
+    }
+    return m
+  }, [rows])
+
   const columns: Column<Row>[] = [
     { key: 'state', label: 'State', value: (r) => r.state },
     { key: 'county', label: 'County', value: (r) => r.county },
@@ -127,8 +138,26 @@ export function DsdCoverage() {
         isCovered(r) ? (
           <span style={{ color: theme.good }}>{r.distributor}</span>
         ) : (
-          <span style={{ color: theme.bad }}>✗ Whitespace</span>
+          <span style={{ color: theme.bad }}>Not served</span>
         ),
+    },
+    {
+      key: 'potential_coverage',
+      label: 'Potential Coverage',
+      value: (r) => {
+        if (isCovered(r)) return r.distributor ?? ''
+        const dists = stateDistributors.get(r.state ?? '')
+        return dists ? Array.from(dists).sort().join(', ') : '—'
+      },
+      render: (r) => {
+        if (isCovered(r)) return <span style={{ color: theme.good }}>✓ {r.distributor}</span>
+        const dists = stateDistributors.get(r.state ?? '')
+        return (
+          <span className="text-xs" style={{ color: theme.warn }}>
+            {dists ? Array.from(dists).sort().join(', ') : '(no other coverage in state)'}
+          </span>
+        )
+      },
     },
     { key: 'fips', label: 'FIPS', value: (r) => r.fips },
   ]
