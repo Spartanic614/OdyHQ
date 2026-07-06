@@ -59,8 +59,8 @@ export function Shell() {
 
   return (
     <div className="flex h-full">
-      <aside className="w-56 shrink-0 glass-nav border-r border-white/10 flex flex-col">
-        <div className="px-4 py-3 border-b border-white/10 space-y-2">
+      <aside className="w-56 shrink-0 bg-blue-600 flex flex-col">
+        <div className="px-4 py-3 border-b border-blue-500 space-y-2">
           <div className="bg-white rounded p-2">
             <img
               src="/Odyssey_Logo_FUNCTIONAL.png"
@@ -68,7 +68,7 @@ export function Shell() {
               className="h-16 w-auto"
             />
           </div>
-          <div className="text-[11px] text-muted tracking-wide">
+          <div className="text-[11px] text-blue-100 tracking-wide">
             AI Mothership
           </div>
         </div>
@@ -97,15 +97,15 @@ export function Shell() {
                 onDrop(n.to)
                 setOverTo(null)
               }}
-              className={`group relative ${overTo === n.to && dragTo !== n.to ? 'bg-accent/10' : ''}`}
+              className={`group relative ${overTo === n.to && dragTo !== n.to ? 'bg-blue-500/30' : ''}`}
             >
               <NavLink
                 to={n.to}
                 className={({ isActive }) =>
                   `block px-4 py-2 text-sm border-l-2 transition-colors cursor-grab active:cursor-grabbing ${
                     isActive
-                      ? 'border-accent bg-white/10 text-text'
-                      : 'border-transparent text-muted hover:text-text hover:bg-white/5'
+                      ? 'border-white bg-blue-500 text-white font-medium'
+                      : 'border-transparent text-blue-100 hover:text-white hover:bg-blue-500/20'
                   } ${dragTo === n.to ? 'opacity-40' : ''}`
                 }
               >
