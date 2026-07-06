@@ -246,10 +246,11 @@ export function Portfolio() {
                         aspectRatio: isVarietyPack ? '3/4' : skuCanAspect(s.flavor ?? s.sku_code),
                         backgroundColor: '#000000',
                         borderColor: '#1f2937',
+                        containerType: 'inline-size',
                       }}
                     >
                       {isVarietyPack && varietyPackImage ? (
-                        <img src={varietyPackImage} alt={`${s.sku_code === '222' ? '2' : '3'} Flavor Pack`} className="w-full h-full object-contain" />
+                        <img src={varietyPackImage} alt={`${skuNum === '222' ? '2' : '3'} Flavor Pack`} className="w-full h-full object-contain" />
                       ) : hasSkuCanArt(s.flavor ?? s.sku_code) ? (
                         <SkuCanImage flavor={s.flavor ?? s.sku_code} dimmed={false} />
                       ) : (
@@ -258,7 +259,7 @@ export function Portfolio() {
                         </div>
                       )}
                     </div>
-                    <div className="text-[9px] text-muted text-center truncate">{s.flavor || `${s.sku_code === '222' ? '2' : '3'} Flavor Pack`}</div>
+                    <div className="text-[9px] text-muted text-center truncate">{s.flavor || `${skuNum === '222' ? '2' : '3'} Flavor Pack`}</div>
                   </button>
                 </div>
               )
@@ -296,6 +297,7 @@ function PortfolioTable({
               aspectRatio: skuCanAspect(flavor),
               backgroundColor: theme.surfaceAlt,
               borderColor: theme.border,
+              containerType: 'inline-size',
             }}
           >
             {hasSkuCanArt(flavor) && <SkuCanImage flavor={flavor} dimmed={false} />}
@@ -444,6 +446,7 @@ function ProductModal({ sku, onClose }: { sku: SkuMeta; onClose: () => void }) {
               aspectRatio: skuCanAspect(flavor),
               backgroundColor: theme.surfaceAlt,
               borderColor: theme.border,
+              containerType: 'inline-size',
             }}
           >
             {hasSkuCanArt(flavor) ? (

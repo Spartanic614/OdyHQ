@@ -28,7 +28,11 @@
       "Bash(git check-ignore *)",
       "Bash(npx --yes vercel git connect)",
       "Bash(npx --yes vercel ls ody-hq)",
-      "mcp__Claude_in_Chrome__tabs_context_mcp"
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "Bash(curl -sI \"http://localhost:5173/222%20Variety%20Pack.jpg\")",
+      "Bash(curl -sI \"http://localhost:5173/85%20Variety%20Pack.png\")",
+      "Bash(npx tsc *)",
+      "Bash(git commit -m 'Fix variety pack label to use extracted SKU number instead of exact match *)"
     ]
   }
 }
