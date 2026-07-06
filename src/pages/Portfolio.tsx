@@ -231,8 +231,9 @@ export function Portfolio() {
               return 0
             })
             .map((s) => {
-              const isVarietyPack = s.sku_code === '222' || s.sku_code === '85'
-              const varietyPackImage = s.sku_code === '222' ? '/222 Variety Pack.jpg' : s.sku_code === '85' ? '/85 Variety Pack.png' : null
+              const skuNum = s.sku_code?.replace(/[^\d]/g, '') // Extract just the numbers
+              const isVarietyPack = skuNum === '222' || skuNum === '85'
+              const varietyPackImage = skuNum === '222' ? '/222 Variety Pack.jpg' : skuNum === '85' ? '/85 Variety Pack.png' : null
               return (
                 <div key={s.sku_code} className="w-full">
                   <button
