@@ -81,6 +81,7 @@ export const COGS_PER_CASE = 10
 // exact first, then substring fallback).
 export const CHANNEL_GROUPS: Record<string, string[]> = {
   'Large Format': ['large format', 'conventional', 'grocery', 'mass', 'club', 'drug', 'big box'],
+  'Small Format': ['small format', 'convenience', 'c-store', 'gas', 'independent'],
   Natural: ['natural', 'natural & specialty', 'specialty', 'co-op', 'coop', 'infra', 'ncg'],
 }
 
