@@ -679,10 +679,11 @@ function DonutChart({
   let cumulativeValue = 0
   const segments = data.map((d) => {
     const percentage = d.value / total
-    const strokeDashoffset = circumference * (1 - percentage)
+    const strokeDashlength = circumference * percentage
+    const strokeDashoffset = -(circumference * (cumulativeValue / total))
     const rotation = (cumulativeValue / total) * 360
     cumulativeValue += d.value
-    return { ...d, strokeDashoffset, rotation }
+    return { ...d, strokeDashlength, strokeDashoffset, rotation }
   })
 
   return (
@@ -698,8 +699,8 @@ function DonutChart({
             fill="none"
             stroke={segment.color}
             strokeWidth="20"
-            strokeDasharray={circumference * (segment.value / total)}
-            strokeDashoffset={-circumference * (cumulativeValue / total - segment.value / total)}
+            strokeDasharray={segment.strokeDashlength}
+            strokeDashoffset={segment.strokeDashoffset}
             style={{
               opacity: 0.9,
             }}
