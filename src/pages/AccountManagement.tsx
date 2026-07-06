@@ -12,6 +12,7 @@ import { channelGroup } from '../config/methodology'
 import { fmtInt } from '../lib/format'
 import { tierColors, theme } from '../theme'
 import type { ChainPriority, HitListRow } from '../data/selectors'
+import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 const MEETING_OPTIONS = [
   'Not Contacted',
@@ -24,21 +25,34 @@ const MEETING_OPTIONS = [
 type Tab = 'tracker' | 'hitlist' | 'mostwanted' | 'authgap'
 
 export function AccountManagement() {
-  const { chains } = useData()
+  const { chains, categoryReviews } = useData()
   const [tab, setTab] = useState<Tab>('tracker')
   const [chainId, setChainId] = useState<string | null>(null)
   const [selectedManager, setSelectedManager] = useState<string | null>(null)
 
   const managerMetrics = useMemo(() => {
-    const managers = new Map<string, { accounts: number; universe: number; active: number }>()
+    const managers = new Map<string, { accounts: number; universe: number; active: number; scheduled: number; pending: number; completed: number; declined: number }>()
 
     chains.rows.forEach((c) => {
       const m = c.account_manager || 'Unassigned'
-      const existing = managers.get(m) || { accounts: 0, universe: 0, active: 0 }
+      const existing = managers.get(m) || { accounts: 0, universe: 0, active: 0, scheduled: 0, pending: 0, completed: 0, declined: 0 }
       existing.accounts++
       existing.universe += c.total_universe ?? 0
       if (c.active === 'Active') existing.active++
       managers.set(m, existing)
+    })
+
+    categoryReviews.rows.forEach((cr) => {
+      const chain = chains.rows.find((c) => c.chain_id === cr.chain_id)
+      if (!chain) return
+      const m = chain.account_manager || 'Unassigned'
+      const existing = managers.get(m)
+      if (existing) {
+        if (cr.date_scheduled) existing.scheduled++
+        else if (cr.meeting_progress === 'Pending') existing.pending++
+        else if (cr.meeting_progress === 'Completed') existing.completed++
+        else if (cr.meeting_progress === 'Declined') existing.declined++
+      }
     })
 
     return Array.from(managers.entries())
@@ -93,6 +107,39 @@ export function AccountManagement() {
         </div>
       </div>
 
+      {/* Category Review Pipeline */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">Category Review Pipeline</h2>
+        <div className="card p-4">
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart
+              data={[
+                { name: 'Scheduled', value: managerMetrics.reduce((sum, m) => sum + m.scheduled, 0), fill: theme.good },
+                { name: 'Pending', value: managerMetrics.reduce((sum, m) => sum + m.pending, 0), fill: theme.warn },
+                { name: 'Completed', value: managerMetrics.reduce((sum, m) => sum + m.completed, 0), fill: theme.info },
+                { name: 'Declined', value: managerMetrics.reduce((sum, m) => sum + m.declined, 0), fill: theme.bad },
+              ]}
+              layout="vertical"
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#2a2f38" />
+              <XAxis type="number" stroke={theme.textMuted} style={{ fontSize: '12px' }} />
+              <YAxis dataKey="name" type="category" stroke={theme.textMuted} style={{ fontSize: '12px' }} width={80} />
+              <Tooltip contentStyle={{ backgroundColor: '#13161b', border: `1px solid ${theme.border}` }} />
+              <Bar dataKey="value" fill={theme.good} radius={[0, 8, 8, 0]}>
+                {[
+                  { name: 'Scheduled', fill: theme.good },
+                  { name: 'Pending', fill: theme.warn },
+                  { name: 'Completed', fill: theme.info },
+                  { name: 'Declined', fill: theme.bad },
+                ].map((item, i) => (
+                  <Cell key={`cell-${i}`} fill={item.fill} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </section>
+
       {/* Account Manager Scorecard */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Account Manager Performance</h2>
@@ -118,6 +165,24 @@ export function AccountManagement() {
                   <span className="font-medium" style={{ color: theme.good }}>
                     {manager.activePct}%
                   </span>
+                </div>
+                <div className="border-t border-white/10 pt-2 mt-2 space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-muted">Scheduled</span>
+                    <span style={{ color: theme.good }}>{manager.scheduled}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted">Pending</span>
+                    <span style={{ color: theme.warn }}>{manager.pending}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted">Completed</span>
+                    <span style={{ color: theme.info }}>{manager.completed}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted">Declined</span>
+                    <span style={{ color: theme.bad }}>{manager.declined}</span>
+                  </div>
                 </div>
               </div>
             </button>

@@ -4,7 +4,7 @@ import { theme } from '../theme'
 import { fmtInt } from '../lib/format'
 import { TableSkeleton, ErrorBanner } from '../components/States'
 import { channelGroup } from '../config/methodology'
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 export function ExecutiveSummary() {
   const { chains, categoryReviews, loading } = useData()
@@ -175,49 +175,6 @@ export function ExecutiveSummary() {
             </ResponsiveContainer>
           </div>
 
-          {/* Review Pipeline Progress */}
-          <div className="card p-4">
-            <div className="text-sm font-semibold mb-3">Category Review Pipeline</div>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart
-                data={[
-                  { name: 'Scheduled', value: metrics.scheduled, fill: theme.good },
-                  { name: 'Pending', value: metrics.pending, fill: theme.warn },
-                  { name: 'Completed', value: metrics.completed, fill: theme.info },
-                  { name: 'Declined', value: metrics.declined, fill: theme.bad },
-                ]}
-                layout="vertical"
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#2a2f38" />
-                <XAxis type="number" stroke={theme.textMuted} style={{ fontSize: '12px' }} />
-                <YAxis dataKey="name" type="category" stroke={theme.textMuted} style={{ fontSize: '12px' }} width={80} />
-                <Tooltip contentStyle={{ backgroundColor: '#13161b', border: `1px solid ${theme.border}` }} />
-                <Bar dataKey="value" fill={theme.good} radius={[0, 8, 8, 0]}>
-                  {[
-                    { name: 'Scheduled', value: metrics.scheduled, fill: theme.good },
-                    { name: 'Pending', value: metrics.pending, fill: theme.warn },
-                    { name: 'Completed', value: metrics.completed, fill: theme.info },
-                    { name: 'Declined', value: metrics.declined, fill: theme.bad },
-                  ].map((item, i) => (
-                    <Cell key={`cell-${i}`} fill={item.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </section>
-
-      {/* Review Pipeline */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-text">Category Review Pipeline</h2>
-        <div className="card p-4">
-          <div className="grid gap-4 grid-cols-2 sm:grid-cols-4">
-            <PipelineStage label="Scheduled" value={metrics.scheduled} color={theme.good} />
-            <PipelineStage label="Pending" value={metrics.pending} color={theme.warn} />
-            <PipelineStage label="Completed" value={metrics.completed} color={theme.info} />
-            <PipelineStage label="Declined" value={metrics.declined} color={theme.bad} />
-          </div>
         </div>
       </section>
     </div>
@@ -244,17 +201,6 @@ function StatCard({
           {detail}
         </div>
       </div>
-    </div>
-  )
-}
-
-function PipelineStage({ label, value, color }: { label: string; value: number; color: string }) {
-  return (
-    <div className="text-center space-y-2">
-      <div className="text-2xl font-bold" style={{ color }}>
-        {value}
-      </div>
-      <div className="text-xs text-muted">{label}</div>
     </div>
   )
 }
