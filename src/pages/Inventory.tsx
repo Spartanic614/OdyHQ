@@ -252,6 +252,60 @@ export function Inventory() {
         )}
       </div>
 
+      {/* Demo data */}
+      <div className="card p-4 space-y-3 bg-blue-950/20 border border-blue-500/20">
+        <div className="text-sm font-semibold">Demo Data (Copy & Paste)</div>
+        <p className="text-xs text-muted">
+          Sample inventory data showing at-risk and reorder scenarios. Paste this to see how the reorder analysis works.
+        </p>
+        <div className="relative">
+          <textarea
+            readOnly
+            value={`DC	SKU	Description	On Hand	Avg Weekly Sales	Qty On PO
+CHN	ODY-001	Focus 50mg 12pk	45	60	0
+CHN	ODY-002	Calm 25mg 12pk	18	25	36
+CHN	ODY-003	Energy 100mg 12pk	156	40	0
+CHN	ODY-004	Sleep 30mg 12pk	8	18	48
+CHN	ODY-005	Immunity 60ct	220	35	0
+LAX	ODY-001	Focus 50mg 12pk	92	55	0
+LAX	ODY-002	Calm 25mg 12pk	72	28	0
+LAX	ODY-003	Energy 100mg 12pk	320	38	0
+LAX	ODY-004	Sleep 30mg 12pk	14	20	24
+LAX	ODY-006	Vitality caps 120ct	88	15	0
+DAL	ODY-001	Focus 50mg 12pk	22	50	48
+DAL	ODY-002	Calm 25mg 12pk	5	22	0
+DAL	ODY-003	Energy 100mg 12pk	180	42	0
+DAL	ODY-004	Sleep 30mg 12pk	3	16	36
+DAL	ODY-007	Recovery powder 30srv	145	12	0`}
+            className="w-full h-56 p-3 text-xs font-mono bg-black/40 border border-white/10 rounded resize-none"
+          />
+          <button
+            onClick={() => {
+              const text = `DC	SKU	Description	On Hand	Avg Weekly Sales	Qty On PO
+CHN	ODY-001	Focus 50mg 12pk	45	60	0
+CHN	ODY-002	Calm 25mg 12pk	18	25	36
+CHN	ODY-003	Energy 100mg 12pk	156	40	0
+CHN	ODY-004	Sleep 30mg 12pk	8	18	48
+CHN	ODY-005	Immunity 60ct	220	35	0
+LAX	ODY-001	Focus 50mg 12pk	92	55	0
+LAX	ODY-002	Calm 25mg 12pk	72	28	0
+LAX	ODY-003	Energy 100mg 12pk	320	38	0
+LAX	ODY-004	Sleep 30mg 12pk	14	20	24
+LAX	ODY-006	Vitality caps 120ct	88	15	0
+DAL	ODY-001	Focus 50mg 12pk	22	50	48
+DAL	ODY-002	Calm 25mg 12pk	5	22	0
+DAL	ODY-003	Energy 100mg 12pk	180	42	0
+DAL	ODY-004	Sleep 30mg 12pk	3	16	36
+DAL	ODY-007	Recovery powder 30srv	145	12	0`
+              navigator.clipboard.writeText(text)
+            }}
+            className="absolute top-3 right-3 text-xs btn"
+          >
+            Copy
+          </button>
+        </div>
+      </div>
+
       {/* Paste box */}
       <div className="card p-3 space-y-2">
         <div className="text-sm font-semibold">
