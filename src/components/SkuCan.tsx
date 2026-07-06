@@ -16,10 +16,9 @@ export function skuCanAspect(flavor: string): string {
 export const hasSkuCanArt = (flavor: string): boolean => !!portfolioCropFor(flavor)
 
 /**
- * A single flavor cropped out of the shared portfolio sprite, using CSS
- * container query units so it scales responsively inside any container that
- * has `containerType: 'inline-size'` and an aspect-ratio matching
- * skuCanAspect(flavor). Renders nothing if the flavor isn't pictured.
+ * A single flavor cropped out of the shared portfolio sprite using
+ * background-image positioning. Scales responsively inside any container
+ * with an aspect-ratio matching skuCanAspect(flavor).
  */
 export function SkuCanImage({
   flavor,
@@ -32,17 +31,17 @@ export function SkuCanImage({
 }) {
   const crop = portfolioCropFor(flavor)
   if (!crop) return null
+
   return (
-    <img
-      src={PORTFOLIO_IMAGE}
-      alt={flavor}
-      draggable={false}
+    <div
       style={{
         display: 'block',
-        width: `${(PORTFOLIO_IMAGE_WIDTH / crop.width) * 100}cqw`,
-        maxWidth: 'none',
-        height: 'auto',
-        marginLeft: `-${(crop.left / crop.width) * 100}cqw`,
+        width: '100%',
+        height: '100%',
+        backgroundImage: `url(${PORTFOLIO_IMAGE})`,
+        backgroundPosition: `${-(crop.left / PORTFOLIO_IMAGE_WIDTH) * 100}% 0`,
+        backgroundSize: `${(PORTFOLIO_IMAGE_WIDTH / crop.width) * 100}% auto`,
+        backgroundRepeat: 'no-repeat',
         filter: dimmed ? 'grayscale(1)' : 'none',
         opacity: dimmed ? 0.35 : 1,
         transition: 'opacity 150ms, filter 150ms',
@@ -50,6 +49,9 @@ export function SkuCanImage({
         pointerEvents: 'none',
         ...style,
       }}
+      alt={flavor}
+      role="img"
+      aria-label={flavor}
     />
   )
 }
