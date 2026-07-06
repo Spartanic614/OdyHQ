@@ -266,14 +266,17 @@ function MostWanted({ onPick }: { onPick: (id: string) => void }) {
   const [am, setAm] = useState('')
   const [search, setSearch] = useState('')
 
-  // Outlet count = dim_chain.total_universe; channel split via channelGroup().
-  // Show only inactive Large Format accounts with no distribution, ranked by outlet count descending.
+  // Show inactive accounts with no distribution, sorted by largest outlet count.
+  // Focused on Large Format and Natural channels.
   const base = useMemo(
     () =>
       chains.rows
         .filter((c) => c.active === 'Not Active')
         .filter((c) => !c.distributor || c.distributor.trim() === '')
-        .filter((c) => channelGroup(c.channel) === 'Large Format')
+        .filter((c) => {
+          const ch = channelGroup(c.channel)
+          return ch === 'Large Format' || ch === 'Natural'
+        })
         .filter((c) => (c.total_universe ?? 0) > 0)
         .filter((c) => !am || c.account_manager === am)
         .filter((c) =>
