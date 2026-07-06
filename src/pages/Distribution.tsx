@@ -20,7 +20,7 @@ export function Distribution() {
   const [chainId, setChainId] = useState<string | null>(null)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 bg-black/95 p-5 rounded-lg">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Distribution Mothership</h1>
         <div className="flex gap-1">
