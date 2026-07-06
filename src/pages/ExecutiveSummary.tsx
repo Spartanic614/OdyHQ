@@ -404,49 +404,6 @@ export function ExecutiveSummary() {
         <KpiCard label="Declined Reviews" value={kpis.declinedReviews} color={theme.bad} />
       </div>
 
-      {/* Charts Row */}
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
-        {/* Active vs Inactive Donut */}
-        <div className="card p-4 space-y-3">
-          <div className="font-semibold text-sm">Active vs Inactive</div>
-          <DonutChart
-            data={[
-              { name: 'Active', value: kpis.activeAccounts, color: theme.good },
-              { name: 'Inactive', value: kpis.inactiveAccounts, color: '#4b5563' },
-            ]}
-            centerText={`${kpis.activePct}%\nActive`}
-          />
-        </div>
-
-        {/* Channel Mix Donut */}
-        <div className="card p-4 space-y-3">
-          <div className="font-semibold text-sm">Channel Mix</div>
-          <DonutChart
-            data={channelBreakdown.map((c) => ({
-              name: c.name,
-              value: c.accounts,
-              color: ['#10b981', '#3b82f6', '#f59e0b', '#6b7280', '#ec4899', '#8b5cf6', '#06b6d4', '#f97316'][
-                channelBreakdown.indexOf(c) % 8
-              ] as string,
-            }))}
-            centerText={`${kpis.totalAccounts}\nAccounts`}
-          />
-        </div>
-
-        {/* Meeting Status Donut */}
-        <div className="card p-4 space-y-3">
-          <div className="font-semibold text-sm">Meeting Status</div>
-          <DonutChart
-            data={[
-              { name: 'Scheduled', value: kpis.categoryReviewsScheduled, color: theme.good },
-              { name: 'Pending', value: kpis.meetingsPending, color: theme.warn },
-              { name: 'Declined', value: kpis.declinedReviews, color: theme.bad },
-            ]}
-            centerText={`${kpis.categoryReviewsScheduled + kpis.meetingsPending + kpis.declinedReviews}\nReviews`}
-          />
-        </div>
-      </div>
-
       {/* Channel Breakdown */}
       <div>
         <h2 className="text-lg font-semibold mb-3">Channel Breakdown</h2>
@@ -662,78 +619,6 @@ function KpiCard({
       </div>
       {suffix && <div className="text-xs text-muted">{suffix}</div>}
       {detail && <div className="text-sm font-medium" style={{ color: theme.info }}>{detail}</div>}
-    </div>
-  )
-}
-
-function DonutChart({
-  data,
-  centerText,
-}: {
-  data: Array<{ name: string; value: number; color: string }>
-  centerText: string
-}) {
-  const total = data.reduce((sum, d) => sum + d.value, 0)
-  const cx = 80
-  const cy = 80
-  const outerRadius = 50
-  const innerRadius = 30
-
-  let startAngle = -Math.PI / 2
-  const segments = data.map((d) => {
-    const percentage = d.value / total
-    const endAngle = startAngle + percentage * 2 * Math.PI
-    const segment = { ...d, startAngle, endAngle }
-    startAngle = endAngle
-    return segment
-  })
-
-  const describeArc = (
-    cx: number,
-    cy: number,
-    radius: number,
-    startAngle: number,
-    endAngle: number,
-  ) => {
-    const start = {
-      x: cx + radius * Math.cos(startAngle),
-      y: cy + radius * Math.sin(startAngle),
-    }
-    const end = {
-      x: cx + radius * Math.cos(endAngle),
-      y: cy + radius * Math.sin(endAngle),
-    }
-    const largeArc = endAngle - startAngle > Math.PI ? 1 : 0
-    return `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 1 ${end.x} ${end.y}`
-  }
-
-  return (
-    <div className="flex flex-col items-center gap-3">
-      <svg width="160" height="160" viewBox="0 0 160 160">
-        {segments.map((segment, i) => {
-          const outerArc = describeArc(cx, cy, outerRadius, segment.startAngle, segment.endAngle)
-          const innerArc = describeArc(cx, cy, innerRadius, segment.endAngle, segment.startAngle)
-          const pathData = `${outerArc} L ${cx + innerRadius * Math.cos(segment.endAngle)} ${cy + innerRadius * Math.sin(segment.endAngle)} ${innerArc} Z`
-          return (
-            <path key={i} d={pathData} fill={segment.color} opacity={0.9} />
-          )
-        })}
-        <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle" className="text-xs font-bold fill-text" fontSize="12">
-          {centerText.split('\n').map((line, i) => (
-            <tspan key={i} x={cx} dy={i === 0 ? 0 : '14'}>
-              {line}
-            </tspan>
-          ))}
-        </text>
-      </svg>
-      <div className="flex flex-wrap gap-2 justify-center">
-        {data.map((d) => (
-          <div key={d.name} className="text-xs flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }} />
-            <span className="text-muted">{d.name}</span>
-          </div>
-        ))}
-      </div>
     </div>
   )
 }
