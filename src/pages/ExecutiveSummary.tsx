@@ -4,7 +4,7 @@ import { theme } from '../theme'
 import { fmtInt } from '../lib/format'
 import { TableSkeleton, ErrorBanner } from '../components/States'
 import { channelGroup } from '../config/methodology'
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 export function ExecutiveSummary() {
   const { chains, categoryReviews, loading } = useData()
@@ -128,32 +128,6 @@ export function ExecutiveSummary() {
                 />
                 <Bar dataKey="accounts" fill={theme.good} radius={[8, 8, 0, 0]} />
               </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Active vs Inactive Pie Chart */}
-          <div className="card p-4">
-            <div className="text-sm font-semibold mb-3">Status Distribution</div>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={[
-                    { name: 'Active', value: metrics.activeAccounts },
-                    { name: 'Inactive', value: metrics.inactiveAccounts },
-                  ]}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  <Cell fill={theme.good} />
-                  <Cell fill={theme.bad} />
-                </Pie>
-                <Tooltip contentStyle={{ backgroundColor: '#13161b', border: `1px solid ${theme.border}` }} />
-              </PieChart>
             </ResponsiveContainer>
           </div>
 

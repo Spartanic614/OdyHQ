@@ -36,7 +36,8 @@
       "Bash(git commit -m 'Fix Distribution heatmap can images broken by SkuCanImage position change *)",
       "Bash(git commit -m 'Add Small Format channel group to Executive Summary *)",
       "Bash(git commit -m 'Replace Category Review Pipeline bar chart with number cards *)",
-      "Bash(git commit -m 'Show variety pack images in Distribution SKU Heatmap *)"
+      "Bash(git commit -m 'Show variety pack images in Distribution SKU Heatmap *)",
+      "Bash(git commit -m 'Remove Status Distribution pie chart from Executive Summary *)"
     ]
   }
 }
