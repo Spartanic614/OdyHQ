@@ -232,7 +232,7 @@ export function Portfolio() {
             })
             .map((s) => {
               const isVarietyPack = s.sku_code === '222' || s.sku_code === '85'
-              const varietyPackImage = s.sku_code === '222' ? '/images/sku-222-variety-pack.png' : s.sku_code === '85' ? '/images/sku-85-variety-pack.png' : null
+              const varietyPackImage = s.sku_code === '222' ? '/222 Variety Pack.jpg' : s.sku_code === '85' ? '/85 Variety Pack.png' : null
               return (
                 <div key={s.sku_code} className="w-full">
                   <button
