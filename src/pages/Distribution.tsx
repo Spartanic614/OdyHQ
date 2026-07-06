@@ -165,7 +165,11 @@ function Heatmap({ onPick }: { onPick: (dc: string) => void }) {
                         cell?.moq != null ? `MOQ ${cell.moq}` : undefined
                       }
                     >
-                      <Cell status={cell?.status ?? undefined} flavor={s.flavor ?? s.sku_code} />
+                      <Cell
+                        status={cell?.status ?? undefined}
+                        flavor={s.flavor ?? s.sku_code}
+                        skuCode={s.sku_code}
+                      />
                     </td>
                   )
                 })}
@@ -178,12 +182,37 @@ function Heatmap({ onPick }: { onPick: (dc: string) => void }) {
   )
 }
 
-function Cell({ status, flavor }: { status?: string; flavor: string }) {
+function Cell({ status, flavor, skuCode }: { status?: string; flavor: string; skuCode: string }) {
   if (status == null)
     return <span className="inline-block w-5 text-ink-500">·</span>
 
   const notAuth = status === AUTH_NOT_AUTHORIZED
   const authorized = !notAuth
+
+  const skuNum = skuCode?.replace(/[^\d]/g, '')
+  const varietyPackImage =
+    skuNum === '222' ? '/222%20Variety%20Pack.jpg' : skuNum === '85' ? '/85%20Variety%20Pack.png' : null
+
+  if (varietyPackImage) {
+    return (
+      <span
+        className="inline-block rounded overflow-hidden align-middle bg-black"
+        title={`${flavor} — ${authorized ? 'Authorized' : 'Not Authorized'}`}
+        style={{
+          width: 22,
+          aspectRatio: '3/4',
+          boxShadow: authorized ? `0 0 0 1px ${theme.good}88` : `0 0 0 1px ${theme.border}`,
+        }}
+      >
+        <img
+          src={varietyPackImage}
+          alt={flavor}
+          className="w-full h-full object-contain"
+          style={{ filter: authorized ? 'none' : 'grayscale(1)', opacity: authorized ? 1 : 0.35 }}
+        />
+      </span>
+    )
+  }
 
   if (!hasSkuCanArt(flavor)) {
     return (
