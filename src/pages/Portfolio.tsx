@@ -230,33 +230,47 @@ export function Portfolio() {
               if (bIdx >= 0) return 1
               return 0
             })
-            .map((s) => (
-              <div key={s.sku_code} className="w-full">
-                <button
-                  onClick={() => setSelected(s)}
-                  className="group text-left card p-2 space-y-1.5 hover:-translate-y-0.5 transition-transform duration-150 h-full w-full"
-                >
-                  <div
-                    className="relative rounded-md overflow-hidden border"
-                    style={{
-                      aspectRatio: skuCanAspect(s.flavor ?? s.sku_code),
-                      backgroundColor: '#000000',
-                      borderColor: '#1f2937',
-                      containerType: 'inline-size',
-                    }}
+            .map((s) => {
+              const isVarietyPack = s.sku_code === '222' || s.sku_code === '85'
+              return (
+                <div key={s.sku_code} className="w-full">
+                  <button
+                    onClick={() => setSelected(s)}
+                    className="group text-left card p-2 space-y-1.5 hover:-translate-y-0.5 transition-transform duration-150 h-full w-full"
                   >
-                    {hasSkuCanArt(s.flavor ?? s.sku_code) ? (
-                      <SkuCanImage flavor={s.flavor ?? s.sku_code} dimmed={false} />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center px-1 text-center">
-                        <span className="text-[9px] text-muted">{s.flavor}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-[9px] text-muted text-center truncate">{s.flavor}</div>
-                </button>
-              </div>
-            ))}
+                    <div
+                      className="relative rounded-md overflow-hidden border bg-black flex items-center justify-center"
+                      style={{
+                        aspectRatio: isVarietyPack ? '3/4' : skuCanAspect(s.flavor ?? s.sku_code),
+                        backgroundColor: '#000000',
+                        borderColor: '#1f2937',
+                        containerType: 'inline-size',
+                        minHeight: isVarietyPack ? '200px' : 'auto',
+                      }}
+                    >
+                      {isVarietyPack ? (
+                        <div className="w-full h-full flex items-center justify-center p-2">
+                          <div className="text-center">
+                            <div className="text-sm font-bold text-white mb-1">
+                              {s.sku_code === '222' ? '2 Flavor' : '3 Flavor'}
+                            </div>
+                            <div className="text-xs text-muted">{s.sku_code === '222' ? '12 Pack' : '12 Pack'}</div>
+                            <div className="text-[10px] text-muted mt-2">Variety Pack</div>
+                          </div>
+                        </div>
+                      ) : hasSkuCanArt(s.flavor ?? s.sku_code) ? (
+                        <SkuCanImage flavor={s.flavor ?? s.sku_code} dimmed={false} />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center px-1 text-center">
+                          <span className="text-[9px] text-muted">{s.flavor}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-[9px] text-muted text-center truncate">{s.flavor || `${s.sku_code === '222' ? '2' : '3'} Flavor Pack`}</div>
+                  </button>
+                </div>
+              )
+            })}
         </div>
       ) : (
         <PortfolioTable rows={filtered} onRowClick={setSelected} />
