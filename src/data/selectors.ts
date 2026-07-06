@@ -9,7 +9,7 @@ import {
   NOT_CONTACTED,
   PROSPECT_NOT_CONTACTED,
   reviewUrgency,
-  tierForScore,
+  tierForOutlets,
   type Tier,
 } from '../config/methodology'
 import type {
@@ -94,7 +94,7 @@ export function chainPriorities(
   return interim
     .map((r) => {
       const score = maxRaw > 0 ? (r.rawScore / maxRaw) * 100 : 0
-      return { ...r, score, tier: tierForScore(score) }
+      return { ...r, score, tier: tierForOutlets(r.chain.total_universe ?? 0) }
     })
     .sort((a, b) => b.score - a.score)
 }

@@ -108,6 +108,12 @@ export function tierForScore(score: number): Tier {
   return 'C'
 }
 
+export function tierForOutlets(outlets: number): Tier {
+  if (outlets >= 300) return 'A'
+  if (outlets >= 100) return 'B'
+  return 'C'
+}
+
 export function reviewUrgency(meetingProgress: string | null | undefined): number {
   if (!meetingProgress) return REVIEW_URGENCY_DEFAULT
   return REVIEW_URGENCY[meetingProgress] ?? REVIEW_URGENCY_DEFAULT
