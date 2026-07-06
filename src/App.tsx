@@ -3,7 +3,6 @@ import { useAuth } from './auth/AuthProvider'
 import { DataProvider } from './data/store'
 import { Shell } from './components/Shell'
 import { Login } from './pages/Login'
-import { ExecutiveSummary } from './pages/ExecutiveSummary'
 import { AccountManagement } from './pages/AccountManagement'
 import { Battlecards } from './pages/Battlecards'
 import { Portfolio } from './pages/Portfolio'
@@ -38,8 +37,7 @@ export default function App() {
     <DataProvider>
       <Routes>
         <Route element={<Shell />}>
-          <Route index element={<Navigate to="/executive-summary" replace />} />
-          <Route path="executive-summary" element={<ExecutiveSummary />} />
+          <Route index element={<Navigate to="/accounts" replace />} />
           <Route path="accounts" element={<AccountManagement />} />
           <Route path="battlecards" element={<Battlecards />} />
           <Route path="portfolio" element={<Portfolio />} />
@@ -49,7 +47,7 @@ export default function App() {
           <Route path="inventory" element={<Inventory />} />
           <Route path="trade-spend" element={<TradeSpend />} />
           <Route path="margin" element={<Margin />} />
-          <Route path="*" element={<Navigate to="/executive-summary" replace />} />
+          <Route path="*" element={<Navigate to="/accounts" replace />} />
         </Route>
       </Routes>
     </DataProvider>
