@@ -109,7 +109,7 @@ export function ExecutiveSummary() {
       existing.accounts++
       existing.universe += c.total_universe ?? 0
       if (c.active === 'Active') existing.active++
-      else existing.inactive++
+      else if (c.active === 'Not Active') existing.inactive++
       channels.set(ch, existing)
     })
 
