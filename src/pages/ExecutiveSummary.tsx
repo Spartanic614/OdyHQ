@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useData } from '../data/store'
-import { theme, tierColors } from '../theme'
+import { theme } from '../theme'
 import { fmtInt } from '../lib/format'
 import { TableSkeleton, ErrorBanner } from '../components/States'
 import { channelGroup } from '../config/methodology'
@@ -53,35 +53,6 @@ export function ExecutiveSummary() {
       .sort((a, b) => b.universe - a.universe)
   }, [chains.rows])
 
-  const regionMetrics = useMemo(() => {
-    const regions = new Map<string, { accounts: number; universe: number; active: number }>()
-
-    chains.rows.forEach((c) => {
-      const r = c.region || 'Unknown'
-      const existing = regions.get(r) || { accounts: 0, universe: 0, active: 0 }
-      existing.accounts++
-      existing.universe += c.total_universe ?? 0
-      if (c.active === 'Active') existing.active++
-      regions.set(r, existing)
-    })
-
-    return Array.from(regions.entries())
-      .map(([name, data]) => ({
-        name,
-        ...data,
-        activePct: data.accounts > 0 ? Math.round((data.active / data.accounts) * 100) : 0,
-      }))
-      .sort((a, b) => b.accounts - a.accounts)
-  }, [chains.rows])
-
-  const highValueInactive = useMemo(() => {
-    return chains.rows.filter((c) => c.active === 'Not Active' && (c.total_universe ?? 0) >= 1000).length
-  }, [chains.rows])
-
-  const noReviewScheduled = useMemo(() => {
-    const scheduled = new Set(categoryReviews.rows.filter((cr) => cr.date_scheduled).map((cr) => cr.chain_id))
-    return chains.rows.filter((c) => !scheduled.has(c.chain_id)).length
-  }, [chains.rows, categoryReviews.rows])
 
   if (loading) return <TableSkeleton />
   if (chains.error) return <ErrorBanner table="dim_chain" message={chains.error} />
@@ -138,53 +109,6 @@ export function ExecutiveSummary() {
         </div>
       </section>
 
-      {/* Regional Performance */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-text">By Region</h2>
-        <div className="card p-4">
-          <div className="space-y-3">
-            {regionMetrics.map((region) => (
-              <div key={region.name} className="flex items-center justify-between text-sm">
-                <div className="flex-1">
-                  <div className="font-semibold">{region.name}</div>
-                  <div className="text-xs text-muted">{region.accounts} accts • {fmtInt(region.universe)} outlets</div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <ProgressBar value={region.activePct} color={theme.good} />
-                  <span className="w-10 text-right font-medium">{region.activePct}%</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* MICRO: Specific actions and alerts */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-text">Action Items</h2>
-        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
-          <AlertCard
-            title="High-Value Inactive"
-            value={highValueInactive}
-            description="+1,000 outlet accounts inactive"
-            color={tierColors.A}
-          />
-          <AlertCard
-            title="No Review Scheduled"
-            value={noReviewScheduled}
-            description="accounts pending engagement"
-            color={tierColors.B}
-          />
-          <AlertCard
-            title="Meetings Pending"
-            value={metrics.pending}
-            description="awaiting confirmation"
-            color={theme.warn}
-          />
-          <AlertCard title="Declined Reviews" value={metrics.declined} description="follow-up needed" color={theme.bad} />
-        </div>
-      </section>
-
       {/* Review Pipeline */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-text">Category Review Pipeline</h2>
@@ -221,39 +145,6 @@ function StatCard({
           {detail}
         </div>
       </div>
-    </div>
-  )
-}
-
-function ProgressBar({ value, color }: { value: number; color: string }) {
-  return (
-    <div className="flex-1 max-w-[120px]">
-      <div className="w-full h-2 bg-white/5 rounded overflow-hidden">
-        <div
-          className="h-full transition-all"
-          style={{ width: `${Math.min(value, 100)}%`, backgroundColor: color }}
-        />
-      </div>
-    </div>
-  )
-}
-
-function AlertCard({
-  title,
-  value,
-  description,
-  color,
-}: {
-  title: string
-  value: number
-  description: string
-  color: string
-}) {
-  return (
-    <div className="card p-4 space-y-2" style={{ borderLeft: `3px solid ${color}` }}>
-      <div className="text-xs text-muted uppercase tracking-wider font-semibold">{title}</div>
-      <div className="text-2xl font-bold">{value}</div>
-      <div className="text-xs text-muted">{description}</div>
     </div>
   )
 }
