@@ -12,7 +12,6 @@ import { channelGroup } from '../config/methodology'
 import { fmtInt } from '../lib/format'
 import { tierColors, theme } from '../theme'
 import type { ChainPriority, HitListRow } from '../data/selectors'
-import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 const MEETING_OPTIONS = [
   'Not Contacted',
@@ -110,33 +109,27 @@ export function AccountManagement() {
       {/* Category Review Pipeline */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Category Review Pipeline</h2>
-        <div className="card p-4">
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart
-              data={[
-                { name: 'Scheduled', value: managerMetrics.reduce((sum, m) => sum + m.scheduled, 0), fill: theme.good },
-                { name: 'Pending', value: managerMetrics.reduce((sum, m) => sum + m.pending, 0), fill: theme.warn },
-                { name: 'Completed', value: managerMetrics.reduce((sum, m) => sum + m.completed, 0), fill: theme.info },
-                { name: 'Declined', value: managerMetrics.reduce((sum, m) => sum + m.declined, 0), fill: theme.bad },
-              ]}
-              layout="vertical"
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#2a2f38" />
-              <XAxis type="number" stroke={theme.textMuted} style={{ fontSize: '12px' }} />
-              <YAxis dataKey="name" type="category" stroke={theme.textMuted} style={{ fontSize: '12px' }} width={80} />
-              <Tooltip contentStyle={{ backgroundColor: '#13161b', border: `1px solid ${theme.border}` }} />
-              <Bar dataKey="value" fill={theme.good} radius={[0, 8, 8, 0]}>
-                {[
-                  { name: 'Scheduled', fill: theme.good },
-                  { name: 'Pending', fill: theme.warn },
-                  { name: 'Completed', fill: theme.info },
-                  { name: 'Declined', fill: theme.bad },
-                ].map((item, i) => (
-                  <Cell key={`cell-${i}`} fill={item.fill} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+          <Kpi
+            label="Scheduled"
+            value={managerMetrics.reduce((sum, m) => sum + m.scheduled, 0)}
+            color={theme.good}
+          />
+          <Kpi
+            label="Pending"
+            value={managerMetrics.reduce((sum, m) => sum + m.pending, 0)}
+            color={theme.warn}
+          />
+          <Kpi
+            label="Completed"
+            value={managerMetrics.reduce((sum, m) => sum + m.completed, 0)}
+            color={theme.info}
+          />
+          <Kpi
+            label="Declined"
+            value={managerMetrics.reduce((sum, m) => sum + m.declined, 0)}
+            color={theme.bad}
+          />
         </div>
       </section>
 
