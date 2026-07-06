@@ -170,7 +170,81 @@ export function DsdCoverage() {
       </div>
 
       {tab === 'compare' ? (
-        <CoverageCompare loadedDsd={loadedDsd} />
+        <>
+          <div className="card p-4 space-y-3 bg-blue-950/20 border border-blue-500/20">
+            <div className="text-sm font-semibold">Demo Data (Copy & Paste)</div>
+            <p className="text-xs text-muted">
+              Paste this sample retail chain data into the comparison map to see how Green Valley Mart (fictional) compares to your DSD coverage in California.
+            </p>
+            <div className="relative">
+              <textarea
+                readOnly
+                value={`County	State	Outlets	Distributor
+Alameda	CA	12	Green Valley Mart
+Butte	CA	3	Green Valley Mart
+Contra Costa	CA	8	Green Valley Mart
+Fresno	CA	0
+Kern	CA	5	Green Valley Mart
+Kings	CA	0
+Los Angeles	CA	18	Green Valley Mart
+Madera	CA	0
+Merced	CA	2	Green Valley Mart
+Monterey	CA	4	Green Valley Mart
+Orange	CA	14	Green Valley Mart
+Riverside	CA	9	Green Valley Mart
+Sacramento	CA	6	Green Valley Mart
+San Bernardino	CA	11	Green Valley Mart
+San Diego	CA	16	Green Valley Mart
+San Francisco	CA	7	Green Valley Mart
+San Joaquin	CA	3	Green Valley Mart
+San Luis Obispo	CA	0
+Santa Barbara	CA	2	Green Valley Mart
+Santa Clara	CA	9	Green Valley Mart
+Santa Cruz	CA	3	Green Valley Mart
+Shasta	CA	0
+Stanislaus	CA	4	Green Valley Mart
+Tulare	CA	0
+Ventura	CA	5	Green Valley Mart`}
+                className="w-full h-64 p-3 text-xs font-mono bg-black/40 border border-white/10 rounded resize-none"
+              />
+              <button
+                onClick={() => {
+                  const text = `County	State	Outlets	Distributor
+Alameda	CA	12	Green Valley Mart
+Butte	CA	3	Green Valley Mart
+Contra Costa	CA	8	Green Valley Mart
+Fresno	CA	0
+Kern	CA	5	Green Valley Mart
+Kings	CA	0
+Los Angeles	CA	18	Green Valley Mart
+Madera	CA	0
+Merced	CA	2	Green Valley Mart
+Monterey	CA	4	Green Valley Mart
+Orange	CA	14	Green Valley Mart
+Riverside	CA	9	Green Valley Mart
+Sacramento	CA	6	Green Valley Mart
+San Bernardino	CA	11	Green Valley Mart
+San Diego	CA	16	Green Valley Mart
+San Francisco	CA	7	Green Valley Mart
+San Joaquin	CA	3	Green Valley Mart
+San Luis Obispo	CA	0
+Santa Barbara	CA	2	Green Valley Mart
+Santa Clara	CA	9	Green Valley Mart
+Santa Cruz	CA	3	Green Valley Mart
+Shasta	CA	0
+Stanislaus	CA	4	Green Valley Mart
+Tulare	CA	0
+Ventura	CA	5	Green Valley Mart`
+                  navigator.clipboard.writeText(text)
+                }}
+                className="absolute top-3 right-3 text-xs btn"
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+          <CoverageCompare loadedDsd={loadedDsd} />
+        </>
       ) : loading ? (
         <TableSkeleton />
       ) : error ? (
