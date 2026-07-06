@@ -345,22 +345,32 @@ function Results({ result }: { result: NonNullable<ReturnType<typeof compareCove
       <div className="card overflow-hidden">
         <div className="flex items-center justify-between p-2 border-b border-ink-700">
           <div className="text-sm font-semibold">
-            Coverage Gaps
-            <span className="text-muted font-normal"> — retailers with no DSD coverage</span>
+            Coverage Analysis
+            <span className="text-muted font-normal"> — retailers and their DSD coverage status</span>
           </div>
           <button
             className="btn text-xs"
-            onClick={() =>
-              exportCsv(
-                'coverage_gaps',
-                gaps.map((g) => ({
+            onClick={() => {
+              const allRows = [
+                ...served.map((s) => ({
+                  FIPS: s.fips,
+                  County: s.county,
+                  State: s.state,
+                  Outlets: s.outlets,
+                  Status: 'Served',
+                  Distributor: s.distributor ?? '—',
+                })),
+                ...gaps.map((g) => ({
                   FIPS: g.fips,
                   County: g.county,
                   State: g.state,
                   Outlets: g.outlets,
+                  Status: 'Gap',
+                  Distributor: '—',
                 })),
-              )
-            }
+              ]
+              exportCsv('coverage_analysis', allRows)
+            }}
           >
             ⤓ CSV
           </button>
@@ -369,25 +379,52 @@ function Results({ result }: { result: NonNullable<ReturnType<typeof compareCove
           <table className="w-full border-collapse text-sm">
             <thead className="sticky top-0 bg-ink-800">
               <tr>
+                <th className="th">Status</th>
                 <th className="th">County</th>
                 <th className="th">State</th>
                 <th className="th">FIPS</th>
                 <th className="th text-right">Outlets</th>
+                <th className="th">Distributor</th>
               </tr>
             </thead>
             <tbody>
-              {gaps.map((g) => (
-                <tr key={g.fips} className="bg-bad/5">
+              {served.length > 0 && served.map((s) => (
+                <tr key={`served-${s.fips}`} className="bg-info/5">
+                  <td className="td">
+                    <span style={{ color: theme.good }}>✓ Served</span>
+                  </td>
+                  <td className="td font-medium">{s.county || '—'}</td>
+                  <td className="td text-muted">{s.state || '—'}</td>
+                  <td className="td text-muted">{s.fips}</td>
+                  <td className="td text-right font-semibold">{fmtInt(s.outlets)}</td>
+                  <td className="td" style={{ color: theme.good }}>
+                    {s.distributor ?? '—'}
+                  </td>
+                </tr>
+              ))}
+              {gaps.length > 0 && gaps.map((g) => (
+                <tr key={`gap-${g.fips}`} className="bg-bad/5">
+                  <td className="td">
+                    <span style={{ color: theme.bad }}>✗ Gap</span>
+                  </td>
                   <td className="td font-medium">{g.county || '—'}</td>
                   <td className="td text-muted">{g.state || '—'}</td>
                   <td className="td text-muted">{g.fips}</td>
                   <td className="td text-right font-semibold">{fmtInt(g.outlets)}</td>
+                  <td className="td text-muted">—</td>
                 </tr>
               ))}
-              {gaps.length === 0 && (
+              {gaps.length === 0 && served.length === 0 && (
                 <tr>
-                  <td className="td text-muted" colSpan={4}>
-                    No gaps — every retailer county has DSD coverage. 🎉
+                  <td className="td text-muted" colSpan={6}>
+                    No retailers found for this region.
+                  </td>
+                </tr>
+              )}
+              {gaps.length === 0 && served.length > 0 && (
+                <tr>
+                  <td className="td text-muted" colSpan={6}>
+                    ✓ No gaps — every retailer county has DSD coverage! 🎉
                   </td>
                 </tr>
               )}
