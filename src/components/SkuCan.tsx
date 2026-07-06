@@ -49,7 +49,6 @@ export function SkuCanImage({
         pointerEvents: 'none',
         ...style,
       }}
-      alt={flavor}
       role="img"
       aria-label={flavor}
     />
