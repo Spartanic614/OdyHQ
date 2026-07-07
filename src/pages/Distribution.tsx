@@ -7,9 +7,11 @@ import { AuthBadge, Pill } from '../components/StatusBadge'
 import { SelectFilter, uniqueValues } from '../components/Filters'
 import { TableSkeleton, ErrorBanner, EmptyState } from '../components/States'
 import { SkuCanImage, hasSkuCanArt, skuCanAspect } from '../components/SkuCan'
+import { PORTFOLIO_SKUS, portfolioCropFor } from '../config/skuPortfolio'
 import { fmtInt } from '../lib/format'
 import { tierColors, theme } from '../theme'
 import type { SkuOpportunity } from '../data/selectors'
+import type { Sku } from '../data/store'
 import { AUTH_NOT_AUTHORIZED } from '../config/methodology'
 
 type Tab = 'heatmap' | 'opportunity' | 'unlock'
@@ -91,10 +93,22 @@ function Heatmap({ onPick }: { onPick: (dc: string) => void }) {
     [dcs.rows, type, territory, contact],
   )
 
-  const sortedSkus = useMemo(
-    () => [...skus.rows].sort((a, b) => a.sku_code.localeCompare(b.sku_code)),
-    [skus.rows],
-  )
+  // Same left-to-right flow as the Battlecards SKU Authorization box:
+  // portfolio-image order first, then any unpictured SKUs (variety packs)
+  // alphabetically.
+  const sortedSkus = useMemo(() => {
+    const alpha = [...skus.rows].sort((a, b) =>
+      (a.flavor ?? a.sku_code).localeCompare(b.flavor ?? b.sku_code),
+    )
+    const pictured = alpha.filter((s) => portfolioCropFor(s.flavor ?? s.sku_code))
+    const unpictured = alpha.filter((s) => !portfolioCropFor(s.flavor ?? s.sku_code))
+    return [
+      ...PORTFOLIO_SKUS.map((p) => pictured.find((s) => s.flavor === p.flavor)).filter(
+        (s): s is Sku => !!s,
+      ),
+      ...unpictured,
+    ]
+  }, [skus.rows])
 
   if (loading) return <TableSkeleton />
   if (dcSkuAuth.error)
