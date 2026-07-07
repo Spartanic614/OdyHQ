@@ -4,7 +4,7 @@ import { theme } from '../theme'
 import { fmtInt } from '../lib/format'
 import { TableSkeleton, ErrorBanner } from '../components/States'
 import { channelGroup } from '../config/methodology'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts'
 
 export function ExecutiveSummary() {
   const { chains, categoryReviews, loading } = useData()
@@ -126,7 +126,9 @@ export function ExecutiveSummary() {
                   contentStyle={{ backgroundColor: '#13161b', border: `1px solid ${theme.border}` }}
                   labelStyle={{ color: theme.text }}
                 />
-                <Bar dataKey="accounts" fill={theme.good} radius={[8, 8, 0, 0]} />
+                <Bar dataKey="accounts" fill={theme.good} radius={[8, 8, 0, 0]}>
+                  <LabelList dataKey="accounts" position="top" style={{ fill: theme.text, fontSize: 12, fontWeight: 600 }} />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -144,7 +146,14 @@ export function ExecutiveSummary() {
                   labelStyle={{ color: theme.text }}
                   formatter={(value) => `${value}%`}
                 />
-                <Bar dataKey="activePct" fill={theme.accent} radius={[8, 8, 0, 0]} />
+                <Bar dataKey="activePct" fill={theme.accent} radius={[8, 8, 0, 0]}>
+                  <LabelList
+                    dataKey="activePct"
+                    position="top"
+                    formatter={(value: number) => `${value}%`}
+                    style={{ fill: theme.text, fontSize: 12, fontWeight: 600 }}
+                  />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
