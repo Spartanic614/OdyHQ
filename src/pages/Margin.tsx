@@ -25,7 +25,7 @@ export function Margin() {
     r.marginPct == null ? theme.textMuted : r.marginPct >= 0 ? theme.good : theme.bad
 
   return (
-    <div className="space-y-4 max-w-3xl">
+    <div className="space-y-4">
       <div>
         <h1 className="text-xl font-semibold">Margin Calculator</h1>
         <p className="text-sm text-muted">

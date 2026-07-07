@@ -39,7 +39,8 @@
       "Bash(git commit -m 'Show variety pack images in Distribution SKU Heatmap *)",
       "Bash(git commit -m 'Remove Status Distribution pie chart from Executive Summary *)",
       "Bash(git commit -m 'Add data labels above bars in Executive Summary charts *)",
-      "Bash(git commit -m 'Match Distribution heatmap column order to Battlecards SKU flow *)"
+      "Bash(git commit -m 'Match Distribution heatmap column order to Battlecards SKU flow *)",
+      "Bash(git commit -m 'Make Margin Calculator use full page width *)"
     ]
   }
 }
