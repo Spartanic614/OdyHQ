@@ -375,44 +375,25 @@ export function DemoExecutiveSummary() {
         />
       </div>
 
-      {/* Volume by Channel / Distributor */}
+      {/* Volume by Distributor */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Volume</h2>
-        <div className="grid gap-3 lg:grid-cols-2">
-          <ChartCard title="Volume by Channel">
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={byChannel}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2a2f38" />
-                <XAxis dataKey="channel" stroke={theme.textMuted} style={{ fontSize: '11px' }} interval={0} angle={-15} textAnchor="end" height={50} />
-                <YAxis stroke={theme.textMuted} style={{ fontSize: '12px' }} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtInt(v)} />
-                <Bar dataKey="ytd" radius={[8, 8, 0, 0]} isAnimationActive={false}>
-                  <LabelList dataKey="ytd" position="top" formatter={(v: number) => fmtInt(v)} style={{ fill: theme.text, fontSize: 11, fontWeight: 600 }} />
-                  {byChannel.map((c) => (
-                    <Cell key={c.channel} fill={CHANNEL_COLOR[c.channel]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
-
-          <ChartCard title="Volume by Distributor">
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={byDistributor} layout="vertical" margin={{ left: 24 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2a2f38" />
-                <XAxis type="number" stroke={theme.textMuted} style={{ fontSize: '11px' }} />
-                <YAxis dataKey="label" type="category" stroke={theme.textMuted} style={{ fontSize: '11px' }} width={140} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtInt(v)} />
-                <Bar dataKey="ytd" radius={[0, 8, 8, 0]} isAnimationActive={false}>
-                  <LabelList dataKey="ytd" position="right" formatter={(v: number) => fmtInt(v)} style={{ fill: theme.text, fontSize: 11, fontWeight: 600 }} />
-                  {byDistributor.map((s) => (
-                    <Cell key={s.key} fill={s.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        </div>
+        <ChartCard title="Volume by Distributor">
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={byDistributor} layout="vertical" margin={{ left: 24 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#2a2f38" />
+              <XAxis type="number" stroke={theme.textMuted} style={{ fontSize: '11px' }} />
+              <YAxis dataKey="label" type="category" stroke={theme.textMuted} style={{ fontSize: '11px' }} width={140} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtInt(v)} />
+              <Bar dataKey="ytd" radius={[0, 8, 8, 0]} isAnimationActive={false}>
+                <LabelList dataKey="ytd" position="right" formatter={(v: number) => fmtInt(v)} style={{ fill: theme.text, fontSize: 11, fontWeight: 600 }} />
+                {byDistributor.map((s) => (
+                  <Cell key={s.key} fill={s.color} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
 
         <div className="card p-4 space-y-4">
           <div className="flex flex-wrap items-end justify-between gap-4">
@@ -469,51 +450,27 @@ export function DemoExecutiveSummary() {
       {/* Distribution */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Distribution</h2>
-        <div className="grid gap-3 lg:grid-cols-2">
-          <ChartCard title="Distribution by Channel">
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={byChannel}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2a2f38" />
-                <XAxis dataKey="channel" stroke={theme.textMuted} style={{ fontSize: '11px' }} interval={0} angle={-15} textAnchor="end" height={50} />
-                <YAxis stroke={theme.textMuted} style={{ fontSize: '12px' }} tickFormatter={(v) => `${v}%`} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtPct(v / 100, 0)} />
-                <Bar dataKey="distPctRounded" radius={[8, 8, 0, 0]} isAnimationActive={false}>
-                  <LabelList
-                    dataKey="distPctRounded"
-                    position="top"
-                    formatter={(v: number) => `${v}%`}
-                    style={{ fill: theme.text, fontSize: 11, fontWeight: 600 }}
-                  />
-                  {byChannel.map((c) => (
-                    <Cell key={c.channel} fill={CHANNEL_COLOR[c.channel]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
-
-          <ChartCard title="Distribution by Distributor">
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={byDistributor} layout="vertical" margin={{ left: 24 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2a2f38" />
-                <XAxis type="number" stroke={theme.textMuted} style={{ fontSize: '11px' }} tickFormatter={(v) => `${v}%`} />
-                <YAxis dataKey="label" type="category" stroke={theme.textMuted} style={{ fontSize: '11px' }} width={140} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtPct(v / 100, 0)} />
-                <Bar dataKey="distPctRounded" radius={[0, 8, 8, 0]} isAnimationActive={false}>
-                  <LabelList
-                    dataKey="distPctRounded"
-                    position="right"
-                    formatter={(v: number) => `${v}%`}
-                    style={{ fill: theme.text, fontSize: 11, fontWeight: 600 }}
-                  />
-                  {byDistributor.map((s) => (
-                    <Cell key={s.key} fill={s.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        </div>
+        <ChartCard title="Distribution by Distributor">
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={byDistributor} layout="vertical" margin={{ left: 24 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#2a2f38" />
+              <XAxis type="number" stroke={theme.textMuted} style={{ fontSize: '11px' }} tickFormatter={(v) => `${v}%`} />
+              <YAxis dataKey="label" type="category" stroke={theme.textMuted} style={{ fontSize: '11px' }} width={140} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtPct(v / 100, 0)} />
+              <Bar dataKey="distPctRounded" radius={[0, 8, 8, 0]} isAnimationActive={false}>
+                <LabelList
+                  dataKey="distPctRounded"
+                  position="right"
+                  formatter={(v: number) => `${v}%`}
+                  style={{ fill: theme.text, fontSize: 11, fontWeight: 600 }}
+                />
+                {byDistributor.map((s) => (
+                  <Cell key={s.key} fill={s.color} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
 
         <div className="card p-4 space-y-3">
           <div className="text-sm font-semibold">Top Performing DSDs</div>
