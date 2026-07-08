@@ -7,6 +7,7 @@ import { ErrorBoundary } from './ErrorBoundary'
 
 const DEFAULT_NAV = [
   { to: '/demo-executive-summary', label: 'Demo - Executive Summary' },
+  { to: '/demo-data-flow', label: 'Demo - Data Flow' },
   { to: '/accounts', label: 'Account Manager Summary' },
   { to: '/battlecards', label: 'Battlecards' },
   { to: '/portfolio', label: 'Portfolio' },

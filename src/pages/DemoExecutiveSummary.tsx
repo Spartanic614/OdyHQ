@@ -76,18 +76,45 @@ const SEVERITY_COLOR: Record<'high' | 'medium' | 'low', string> = {
   low: theme.good,
 }
 
-const INVENTORY_CALLOUTS: { location: string; sku: string; detail: string; severity: 'high' | 'medium' | 'low' }[] = [
-  { location: 'Rocklin DC', sku: 'Tropical Breeze', detail: '4 days of cover — reorder now', severity: 'high' },
-  { location: 'Independent Wholesale (DSD)', sku: 'Mandarin Orange', detail: 'Stockout risk within 6 days', severity: 'high' },
-  { location: 'Ridgefield DC', sku: 'Blue Raspberry', detail: '9 days of cover — monitor', severity: 'medium' },
-  { location: 'Chesterfield DC', sku: 'Pineapple Mango', detail: 'Overstocked — 11 weeks of cover', severity: 'low' },
+const ACTION_ITEMS: { category: string; text: string; severity: 'high' | 'medium' | 'low' }[] = [
+  {
+    category: 'Inventory Risk',
+    text: 'Send a note to **Rocklin DC** to buy **4 layers of Tropical Breeze** — at risk of stockout (4 days of cover).',
+    severity: 'high',
+  },
+  {
+    category: 'Trade Spend',
+    text: 'Cauterize trade spending at **Northgate Grocers** — hit an inflection point of unprofitability.',
+    severity: 'high',
+  },
+  {
+    category: 'Merchandising',
+    text: 'Increase merchandising frequency at **Union Square Grocers**.',
+    severity: 'medium',
+  },
+  {
+    category: 'Relationship',
+    text: 'No communication with **Redwood Wholesale Club (DSD)** for 92 days — send a check-in note.',
+    severity: 'medium',
+  },
+  {
+    category: 'Category Review',
+    text: '**Northgate Grocers** has a category review submission due **Jul 14**.',
+    severity: 'low',
+  },
 ]
 
-const UPCOMING_REVIEWS = [
-  { account: 'Northgate Grocers', date: 'Jul 14' },
-  { account: 'Union Square Grocers', date: 'Jul 22' },
-  { account: 'Redwood Wholesale Club', date: 'Aug 3' },
-]
+function renderBold(text: string) {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+    part.startsWith('**') && part.endsWith('**') ? (
+      <strong key={i} className="font-semibold text-text">
+        {part.slice(2, -2)}
+      </strong>
+    ) : (
+      <span key={i}>{part}</span>
+    ),
+  )
+}
 
 const TOP_DSDS = [
   { name: 'Timberline Beverage Co.', market: 'Pacific Northwest', volume: 8_400, distPct: 0.82 },
@@ -282,46 +309,39 @@ export function DemoExecutiveSummary() {
         </div>
       </div>
 
-      {/* Daily Summary / Action Items */}
-      <div className="grid gap-3 lg:grid-cols-[2fr_1fr]">
-        <div className="card p-5 flex flex-col justify-center">
-          <div className="text-[10px] text-muted uppercase tracking-wider font-semibold mb-2">
-            Daily Briefing —{' '}
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-          </div>
-          <p className="text-2xl md:text-3xl font-semibold leading-snug">{dailySummary}</p>
+      {/* Daily Briefing */}
+      <div className="card p-5">
+        <div className="text-[10px] text-muted uppercase tracking-wider font-semibold mb-2">
+          Daily Briefing —{' '}
+          {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
         </div>
+        <p className="text-2xl md:text-3xl font-semibold leading-snug">{dailySummary}</p>
+      </div>
 
-        <div className="card p-4 space-y-4">
-          <div>
-            <div className="text-sm font-semibold mb-2">Inventory Callouts by DC/DSD</div>
-            <div className="space-y-2">
-              {INVENTORY_CALLOUTS.map((c, i) => (
-                <div key={i} className="flex items-start gap-2 text-xs">
-                  <span
-                    className="w-1.5 h-1.5 rounded-full mt-1 shrink-0"
-                    style={{ backgroundColor: SEVERITY_COLOR[c.severity] }}
-                  />
-                  <div>
-                    <span className="font-medium">{c.location}</span>
-                    <span className="text-muted"> · {c.sku} — </span>
-                    <span style={{ color: SEVERITY_COLOR[c.severity] }}>{c.detail}</span>
-                  </div>
+      {/* Action Items */}
+      <div className="card p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Action Items</h2>
+          <span className="text-xs text-muted">{ACTION_ITEMS.length} open</span>
+        </div>
+        <div className="space-y-3">
+          {ACTION_ITEMS.map((item, i) => (
+            <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/5">
+              <span
+                className="w-2 h-2 rounded-full mt-1.5 shrink-0"
+                style={{ backgroundColor: SEVERITY_COLOR[item.severity] }}
+              />
+              <div className="flex-1">
+                <div
+                  className="text-[10px] uppercase tracking-wide font-semibold mb-1"
+                  style={{ color: SEVERITY_COLOR[item.severity] }}
+                >
+                  {item.category}
                 </div>
-              ))}
+                <div className="text-sm leading-relaxed">{renderBold(item.text)}</div>
+              </div>
             </div>
-          </div>
-          <div className="border-t border-white/10 pt-3">
-            <div className="text-sm font-semibold mb-2">Upcoming Category Reviews</div>
-            <div className="space-y-1.5">
-              {UPCOMING_REVIEWS.map((r, i) => (
-                <div key={i} className="flex items-center justify-between text-xs">
-                  <span>{r.account}</span>
-                  <span className="text-muted font-medium">{r.date}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          ))}
         </div>
       </div>
 
