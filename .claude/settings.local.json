@@ -43,7 +43,9 @@
       "Bash(git commit -m 'Make Margin Calculator use full page width *)",
       "mcp__visualize__read_me",
       "mcp__visualize__show_widget",
-      "Bash(git commit -m 'Add Demo - Executive Summary concept page *)"
+      "Bash(git commit -m 'Add Demo - Executive Summary concept page *)",
+      "Bash(grep -n \"<Bar$\\\\|<Bar\\\\b\" src/pages/DemoExecutiveSummary.tsx)",
+      "Bash(git commit -m 'Redesign Forecast section: giant trending-actual number, simplified monthly chart *)"
     ]
   }
 }

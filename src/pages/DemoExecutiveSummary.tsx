@@ -2,8 +2,6 @@ import { useMemo, useState } from 'react'
 import {
   BarChart,
   Bar,
-  ComposedChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -80,20 +78,29 @@ const SKUS = [
   { name: 'Mandarin Orange', share: 0.05, index: { Natural: 1.5 } },
 ]
 
-// Relative share of annual volume per month (sums to 1). Elapsed = Jan-Sep;
-// Oct-Dec is a forecast extrapolated from each source's YoY growth rate.
+// Relative share of annual volume per month (sums to 1) — used to spread
+// each source's YTD total into a monthly shape, and to project the
+// remainder of the year at the same seasonal trend.
 const SEASONALITY = [0.070, 0.068, 0.075, 0.078, 0.082, 0.088, 0.090, 0.086, 0.083, 0.082, 0.090, 0.108]
-const ELAPSED_MONTHS = 9
 const sumSlice = (arr: number[], from: number, to: number) => arr.slice(from, to).reduce((a, b) => a + b, 0)
-const SUM_ELAPSED = sumSlice(SEASONALITY, 0, ELAPSED_MONTHS)
-const SUM_REMAINING = sumSlice(SEASONALITY, ELAPSED_MONTHS, 12)
 
-function monthlyForSource(s: VolumeSource): number[] {
-  const growth = s.py > 0 ? s.ytd / s.py - 1 : 0
-  return SEASONALITY.map((w, m) => {
-    if (m < ELAPSED_MONTHS) return s.ytd * (w / SUM_ELAPSED)
-    return s.py * (w / SUM_REMAINING) * (1 + growth)
-  })
+function daysInMonth(year: number, monthIdx: number) {
+  return new Date(year, monthIdx + 1, 0).getDate()
+}
+
+// "Today" expressed as a fraction of the year's seasonal weight elapsed —
+// i.e. how far through the year we are, weighted by typical monthly volume
+// rather than raw days. Scaling YTD by 1/elapsedWeight gives a full-year
+// pace estimate that's consistent with this year's actual trend so far.
+function elapsedSeasonalWeight(now: Date) {
+  const m = now.getMonth()
+  const dim = daysInMonth(now.getFullYear(), m)
+  return sumSlice(SEASONALITY, 0, m) + SEASONALITY[m] * (now.getDate() / dim)
+}
+
+function monthlyForSource(s: VolumeSource, elapsedWeight: number): number[] {
+  const annualPace = elapsedWeight > 0 ? s.ytd / elapsedWeight : 0
+  return SEASONALITY.map((w) => annualPace * w)
 }
 
 const round = (n: number) => Math.round(n)
@@ -151,14 +158,32 @@ export function DemoExecutiveSummary() {
   )
 
   const forecast = useMemo(() => {
-    const perSource = active.map((s) => monthlyForSource(s))
+    const now = new Date()
+    const currentMonthIdx = now.getMonth()
+    const dayOfMonth = now.getDate()
+    const dim = daysInMonth(now.getFullYear(), currentMonthIdx)
+    const elapsedWeight = elapsedSeasonalWeight(now)
+
+    const perSource = active.map((s) => monthlyForSource(s, elapsedWeight))
     const monthly = MONTHS.map((name, m) => {
       const value = perSource.reduce((sum, arr) => sum + arr[m], 0)
-      return { month: name, value: round(value), isForecast: m >= ELAPSED_MONTHS }
+      const status = m < currentMonthIdx ? 'done' : m === currentMonthIdx ? 'today' : 'ahead'
+      return { month: name, value: round(value), status }
     })
-    const annualTotal = monthly.reduce((sum, m) => sum + m.value, 0)
-    const pace = annualTotal / 12
-    return { monthly: monthly.map((m) => ({ ...m, pace: round(pace) })), annualTotal }
+
+    const currentMonthTotal = monthly[currentMonthIdx].value
+    const dailyRunRate = currentMonthTotal / dim
+    const trendingActual = round(dailyRunRate * dayOfMonth)
+
+    return {
+      monthly,
+      monthLabel: MONTHS[currentMonthIdx],
+      dayOfMonth,
+      daysInMonth: dim,
+      trendingActual,
+      dailyRunRate: round(dailyRunRate),
+      currentMonthTotal,
+    }
   }, [active])
 
   const chainVsIndy = useMemo(() => {
@@ -282,7 +307,7 @@ export function DemoExecutiveSummary() {
                 <XAxis dataKey="channel" stroke={theme.textMuted} style={{ fontSize: '11px' }} interval={0} angle={-15} textAnchor="end" height={50} />
                 <YAxis stroke={theme.textMuted} style={{ fontSize: '12px' }} />
                 <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtInt(v)} />
-                <Bar dataKey="ytd" radius={[8, 8, 0, 0]}>
+                <Bar dataKey="ytd" radius={[8, 8, 0, 0]} isAnimationActive={false}>
                   <LabelList dataKey="ytd" position="top" formatter={(v: number) => fmtInt(v)} style={{ fill: theme.text, fontSize: 11, fontWeight: 600 }} />
                   {byChannel.map((c) => (
                     <Cell key={c.channel} fill={CHANNEL_COLOR[c.channel]} />
@@ -299,7 +324,7 @@ export function DemoExecutiveSummary() {
                 <XAxis type="number" stroke={theme.textMuted} style={{ fontSize: '11px' }} />
                 <YAxis dataKey="label" type="category" stroke={theme.textMuted} style={{ fontSize: '11px' }} width={140} />
                 <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtInt(v)} />
-                <Bar dataKey="ytd" radius={[0, 8, 8, 0]}>
+                <Bar dataKey="ytd" radius={[0, 8, 8, 0]} isAnimationActive={false}>
                   <LabelList dataKey="ytd" position="right" formatter={(v: number) => fmtInt(v)} style={{ fill: theme.text, fontSize: 11, fontWeight: 600 }} />
                   {byDistributor.map((s) => (
                     <Cell key={s.key} fill={s.color} />
@@ -310,27 +335,56 @@ export function DemoExecutiveSummary() {
           </ChartCard>
         </div>
 
-        <ChartCard title="Forecast — Monthly vs Annual Pace">
-          <ResponsiveContainer width="100%" height={280}>
-            <ComposedChart data={forecast.monthly}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2a2f38" />
-              <XAxis dataKey="month" stroke={theme.textMuted} style={{ fontSize: '11px' }} />
-              <YAxis stroke={theme.textMuted} style={{ fontSize: '12px' }} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtInt(v)} />
-              <Legend wrapperStyle={{ fontSize: '11px' }} />
-              <Bar dataKey="value" name="Volume" radius={[6, 6, 0, 0]}>
-                {forecast.monthly.map((m, i) => (
-                  <Cell key={i} fill={theme.accent} fillOpacity={m.isForecast ? 0.35 : 0.9} />
-                ))}
-              </Bar>
-              <Line type="monotone" dataKey="pace" name="Annual Pace" stroke={theme.info} strokeWidth={2} dot={false} strokeDasharray="4 4" />
-            </ComposedChart>
-          </ResponsiveContainer>
-          <div className="text-xs text-muted mt-1">
-            Solid bars = actuals (Jan–Sep) · faded bars = forecast (Oct–Dec) · dashed line = pace needed to hit{' '}
-            <span className="text-text font-medium">{fmtInt(forecast.annualTotal)}</span> annual units.
+        <div className="card p-4 space-y-4">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <div className="text-[10px] text-muted uppercase tracking-wider font-semibold">
+                {forecast.monthLabel} {forecast.dayOfMonth} · Trending Actual
+              </div>
+              <div className="text-6xl font-extrabold leading-none mt-1" style={{ color: theme.good }}>
+                {fmtInt(forecast.trendingActual)}
+              </div>
+              <div className="text-xs text-muted mt-2">
+                Updates daily from trend · day {forecast.dayOfMonth} of {forecast.daysInMonth}
+              </div>
+            </div>
+            <div className="flex gap-6">
+              <div className="text-right">
+                <div className="text-[10px] text-muted uppercase tracking-wider font-semibold">Daily Run Rate</div>
+                <div className="text-xl font-bold">{fmtInt(forecast.dailyRunRate)}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-[10px] text-muted uppercase tracking-wider font-semibold">{forecast.monthLabel} Projected</div>
+                <div className="text-xl font-bold">{fmtInt(forecast.currentMonthTotal)}</div>
+              </div>
+            </div>
           </div>
-        </ChartCard>
+
+          <div>
+            <div className="text-sm font-semibold mb-2">Monthly Forecast</div>
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={forecast.monthly}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#2a2f38" />
+                <XAxis dataKey="month" stroke={theme.textMuted} style={{ fontSize: '11px' }} />
+                <YAxis stroke={theme.textMuted} style={{ fontSize: '12px' }} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtInt(v)} />
+                <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive={false}>
+                  <LabelList dataKey="value" position="top" formatter={(v: number) => fmtInt(v)} style={{ fill: theme.text, fontSize: 10, fontWeight: 600 }} />
+                  {forecast.monthly.map((m, i) => (
+                    <Cell
+                      key={i}
+                      fill={m.status === 'today' ? theme.good : theme.accent}
+                      fillOpacity={m.status === 'done' ? 0.9 : m.status === 'today' ? 1 : 0.35}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+            <div className="text-xs text-muted mt-1">
+              Solid = completed months · bright = this month · faded = forecast
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* Distribution */}
@@ -344,7 +398,7 @@ export function DemoExecutiveSummary() {
                 <XAxis dataKey="channel" stroke={theme.textMuted} style={{ fontSize: '11px' }} interval={0} angle={-15} textAnchor="end" height={50} />
                 <YAxis stroke={theme.textMuted} style={{ fontSize: '12px' }} tickFormatter={(v) => `${v}%`} />
                 <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtPct(v / 100, 0)} />
-                <Bar dataKey="distPctRounded" radius={[8, 8, 0, 0]}>
+                <Bar dataKey="distPctRounded" radius={[8, 8, 0, 0]} isAnimationActive={false}>
                   <LabelList
                     dataKey="distPctRounded"
                     position="top"
@@ -366,7 +420,7 @@ export function DemoExecutiveSummary() {
                 <XAxis type="number" stroke={theme.textMuted} style={{ fontSize: '11px' }} tickFormatter={(v) => `${v}%`} />
                 <YAxis dataKey="label" type="category" stroke={theme.textMuted} style={{ fontSize: '11px' }} width={140} />
                 <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtPct(v / 100, 0)} />
-                <Bar dataKey="distPctRounded" radius={[0, 8, 8, 0]}>
+                <Bar dataKey="distPctRounded" radius={[0, 8, 8, 0]} isAnimationActive={false}>
                   <LabelList
                     dataKey="distPctRounded"
                     position="right"
@@ -477,7 +531,7 @@ export function DemoExecutiveSummary() {
               <XAxis type="number" stroke={theme.textMuted} style={{ fontSize: '11px' }} />
               <YAxis dataKey="name" type="category" stroke={theme.textMuted} style={{ fontSize: '11px' }} width={140} />
               <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtInt(v)} />
-              <Bar dataKey="total" fill={theme.accent} radius={[0, 8, 8, 0]}>
+              <Bar dataKey="total" fill={theme.accent} radius={[0, 8, 8, 0]} isAnimationActive={false}>
                 <LabelList dataKey="total" position="right" formatter={(v: number) => fmtInt(v)} style={{ fill: theme.text, fontSize: 11, fontWeight: 600 }} />
               </Bar>
             </BarChart>
@@ -499,6 +553,7 @@ export function DemoExecutiveSummary() {
                   name={c.channel}
                   stackId="ch"
                   fill={CHANNEL_COLOR[c.channel]}
+                  isAnimationActive={false}
                 />
               ))}
             </BarChart>
