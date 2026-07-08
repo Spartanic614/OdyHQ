@@ -6,13 +6,13 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   Cell,
   LabelList,
 } from 'recharts'
 import { theme } from '../theme'
 import { fmtInt, fmtPct, MONTHS } from '../lib/format'
+import { SkuCanImage, hasSkuCanArt, skuCanAspect } from '../components/SkuCan'
 
 // ============================================================
 // Mock data for a forward-looking Executive Summary concept.
@@ -68,6 +68,34 @@ const KEY_ACCOUNTS = [
   { name: 'Redwood Wholesale Club', channel: 'Wholesale' as Channel, ytd: 4_200, growth: -0.08 },
   { name: 'Union Square Grocers', channel: 'Large Format' as Channel, ytd: 3_900, growth: 0.05 },
   { name: 'Ivy League Co-op', channel: 'Small Format' as Channel, ytd: 3_400, growth: -0.15 },
+]
+
+const SEVERITY_COLOR: Record<'high' | 'medium' | 'low', string> = {
+  high: theme.bad,
+  medium: theme.warn,
+  low: theme.good,
+}
+
+const INVENTORY_CALLOUTS: { location: string; sku: string; detail: string; severity: 'high' | 'medium' | 'low' }[] = [
+  { location: 'Rocklin DC', sku: 'Tropical Breeze', detail: '4 days of cover — reorder now', severity: 'high' },
+  { location: 'Independent Wholesale (DSD)', sku: 'Mandarin Orange', detail: 'Stockout risk within 6 days', severity: 'high' },
+  { location: 'Ridgefield DC', sku: 'Blue Raspberry', detail: '9 days of cover — monitor', severity: 'medium' },
+  { location: 'Chesterfield DC', sku: 'Pineapple Mango', detail: 'Overstocked — 11 weeks of cover', severity: 'low' },
+]
+
+const UPCOMING_REVIEWS = [
+  { account: 'Northgate Grocers', date: 'Jul 14' },
+  { account: 'Union Square Grocers', date: 'Jul 22' },
+  { account: 'Redwood Wholesale Club', date: 'Aug 3' },
+]
+
+const TOP_DSDS = [
+  { name: 'Timberline Beverage Co.', market: 'Pacific Northwest', volume: 8_400, distPct: 0.82 },
+  { name: 'Bluegrass Direct', market: 'Kentucky / Tennessee', volume: 6_900, distPct: 0.76 },
+  { name: 'Coastal Carolina Distributing', market: 'The Carolinas', volume: 6_200, distPct: 0.71 },
+  { name: 'Prairie Sun Beverage', market: 'Upper Midwest', volume: 5_700, distPct: 0.68 },
+  { name: 'Desert Ridge Distributors', market: 'Southwest', volume: 5_100, distPct: 0.64 },
+  { name: 'Granite State Beverage', market: 'New England', volume: 4_600, distPct: 0.59 },
 ]
 
 const SKUS = [
@@ -127,13 +155,12 @@ export function DemoExecutiveSummary() {
     const py = active.reduce((sum, s) => sum + s.py, 0)
     const growth = py > 0 ? ytd / py - 1 : 0
     const distPct = ytd > 0 ? active.reduce((sum, s) => sum + s.ytd * s.distPct, 0) / ytd : 0
-    const rating = ytd > 0 ? active.reduce((sum, s) => sum + s.ytd * s.rating, 0) / ytd : 0
 
     const penSources = active.filter((s) => CHAIN_PENETRATION_SOURCES.has(s.key))
     const penYtd = penSources.reduce((sum, s) => sum + s.ytd, 0)
     const penetration = penYtd > 0 ? penSources.reduce((sum, s) => sum + s.ytd * s.distPct, 0) / penYtd : 0
 
-    return { ytd, py, growth, distPct, rating, penetration }
+    return { ytd, py, growth, distPct, penetration }
   }, [active])
 
   const byChannel = useMemo(() => {
@@ -190,19 +217,27 @@ export function DemoExecutiveSummary() {
     }
   }, [active])
 
-  const chainVsIndy = useMemo(() => {
-    const ytd = totals.ytd
-    const chain = active.reduce((sum, s) => sum + s.ytd * s.chainPct, 0)
-    const indy = ytd - chain
-    return { chain, indy, chainPct: ytd > 0 ? chain / ytd : 0 }
-  }, [active, totals.ytd])
-
   const driversAndDrags = useMemo(() => {
     const sorted = [...KEY_ACCOUNTS].sort((a, b) => b.growth - a.growth)
     const drivers = sorted.slice(0, 3)
     const drags = [...sorted].sort((a, b) => a.growth - b.growth).slice(0, 3)
     return { drivers, drags }
   }, [])
+
+  const dailySummary = useMemo(() => {
+    const growthWord = totals.growth >= 0 ? 'up' : 'down'
+    const topDriver = driversAndDrags.drivers[0]
+    const topDrag = driversAndDrags.drags[0]
+    const parts = [
+      `Volume is trending to ${fmtInt(forecast.currentMonthTotal)} units in ${forecast.monthLabel}, ${growthWord} ${fmtPct(Math.abs(totals.growth), 1)} vs PY.`,
+    ]
+    if (topDriver) parts.push(`${topDriver.name} leads growth at +${fmtPct(topDriver.growth, 0)},`)
+    if (topDrag) parts.push(`while ${topDrag.name} is down ${fmtPct(Math.abs(topDrag.growth), 0)}.`)
+    parts.push(
+      `Distribution sits at ${fmtPct(totals.distPct, 0)} with ${fmtPct(totals.penetration, 0)} chain penetration.`,
+    )
+    return parts.join(' ')
+  }, [totals, forecast, driversAndDrags])
 
   const skuPerformance = useMemo(() => {
     const channels = byChannel.map((c) => c.channel)
@@ -247,6 +282,49 @@ export function DemoExecutiveSummary() {
         </div>
       </div>
 
+      {/* Daily Summary / Action Items */}
+      <div className="grid gap-3 lg:grid-cols-[2fr_1fr]">
+        <div className="card p-5 flex flex-col justify-center">
+          <div className="text-[10px] text-muted uppercase tracking-wider font-semibold mb-2">
+            Daily Briefing —{' '}
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </div>
+          <p className="text-2xl md:text-3xl font-semibold leading-snug">{dailySummary}</p>
+        </div>
+
+        <div className="card p-4 space-y-4">
+          <div>
+            <div className="text-sm font-semibold mb-2">Inventory Callouts by DC/DSD</div>
+            <div className="space-y-2">
+              {INVENTORY_CALLOUTS.map((c, i) => (
+                <div key={i} className="flex items-start gap-2 text-xs">
+                  <span
+                    className="w-1.5 h-1.5 rounded-full mt-1 shrink-0"
+                    style={{ backgroundColor: SEVERITY_COLOR[c.severity] }}
+                  />
+                  <div>
+                    <span className="font-medium">{c.location}</span>
+                    <span className="text-muted"> · {c.sku} — </span>
+                    <span style={{ color: SEVERITY_COLOR[c.severity] }}>{c.detail}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="border-t border-white/10 pt-3">
+            <div className="text-sm font-semibold mb-2">Upcoming Category Reviews</div>
+            <div className="space-y-1.5">
+              {UPCOMING_REVIEWS.map((r, i) => (
+                <div key={i} className="flex items-center justify-between text-xs">
+                  <span>{r.account}</span>
+                  <span className="text-muted font-medium">{r.date}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Source toggle */}
       <div className="card p-3 flex flex-wrap items-center gap-2">
         <span className="text-xs text-muted uppercase tracking-wide font-semibold pr-1">Volume Sources</span>
@@ -280,7 +358,7 @@ export function DemoExecutiveSummary() {
       </div>
 
       {/* KPI strip */}
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <Stat label="Total Volume (YTD)" value={fmtInt(totals.ytd)} detail={`PY ${fmtInt(totals.py)}`} color={theme.text} />
         <Stat
           label="YoY Growth"
@@ -295,7 +373,6 @@ export function DemoExecutiveSummary() {
           detail="brick &amp; mortar sources"
           color={theme.accent}
         />
-        <Stat label="Weighted Distro Rating" value={totals.rating.toFixed(0)} detail="/ 100" color={theme.warn} />
       </div>
 
       {/* Volume by Channel / Distributor */}
@@ -437,47 +514,62 @@ export function DemoExecutiveSummary() {
             </ResponsiveContainer>
           </ChartCard>
         </div>
+
+        <div className="card p-4 space-y-3">
+          <div className="text-sm font-semibold">Top Performing DSDs</div>
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-muted">
+                <th className="text-left font-medium pb-1.5">DSD</th>
+                <th className="text-left font-medium pb-1.5">Independent Market</th>
+                <th className="text-right font-medium pb-1.5">Volume</th>
+                <th className="text-right font-medium pb-1.5">Distribution</th>
+              </tr>
+            </thead>
+            <tbody>
+              {TOP_DSDS.map((d) => (
+                <tr key={d.name} className="border-t border-white/5">
+                  <td className="py-1.5 font-medium">{d.name}</td>
+                  <td className="py-1.5 text-muted">{d.market}</td>
+                  <td className="py-1.5 text-right font-medium">{fmtInt(d.volume)}</td>
+                  <td className="py-1.5 text-right font-semibold" style={{ color: theme.info }}>
+                    {fmtPct(d.distPct, 0)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
-      {/* Chain vs Indy / Key Accounts / Drivers & Drags */}
+      {/* Key Accounts / Drivers & Drags */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Accounts</h2>
-        <div className="grid gap-3 lg:grid-cols-2">
-          <div className="card p-4 space-y-3">
-            <div className="text-sm font-semibold">Chain vs Indy</div>
-            <div className="grid grid-cols-2 gap-3">
-              <Stat label="Chain" value={fmtInt(chainVsIndy.chain)} detail={fmtPct(chainVsIndy.chainPct, 0)} color={theme.info} />
-              <Stat label="Independent" value={fmtInt(chainVsIndy.indy)} detail={fmtPct(1 - chainVsIndy.chainPct, 0)} color={theme.accent} />
-            </div>
-            <ShareBar leftPct={chainVsIndy.chainPct} leftColor={theme.info} rightColor={theme.accentSoft} leftLabel="Chain" rightLabel="Indy" />
-          </div>
-
-          <div className="card p-4 space-y-3">
-            <div className="text-sm font-semibold">Key Accounts (Top 10)</div>
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-muted">
-                  <th className="text-left font-medium pb-1.5">Account</th>
-                  <th className="text-left font-medium pb-1.5">Channel</th>
-                  <th className="text-right font-medium pb-1.5">Volume</th>
-                  <th className="text-right font-medium pb-1.5">Growth</th>
+        <div className="card p-4 space-y-3">
+          <div className="text-sm font-semibold">Key Accounts (Top 10)</div>
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-muted">
+                <th className="text-left font-medium pb-1.5">Account</th>
+                <th className="text-left font-medium pb-1.5">Channel</th>
+                <th className="text-right font-medium pb-1.5">Volume</th>
+                <th className="text-right font-medium pb-1.5">Growth</th>
+              </tr>
+            </thead>
+            <tbody>
+              {KEY_ACCOUNTS.map((a) => (
+                <tr key={a.name} className="border-t border-white/5">
+                  <td className="py-1.5">{a.name}</td>
+                  <td className="py-1.5 text-muted">{a.channel}</td>
+                  <td className="py-1.5 text-right font-medium">{fmtInt(a.ytd)}</td>
+                  <td className="py-1.5 text-right font-semibold" style={{ color: a.growth >= 0 ? theme.good : theme.bad }}>
+                    {a.growth >= 0 ? '+' : ''}
+                    {fmtPct(a.growth, 0)}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {KEY_ACCOUNTS.map((a) => (
-                  <tr key={a.name} className="border-t border-white/5">
-                    <td className="py-1.5">{a.name}</td>
-                    <td className="py-1.5 text-muted">{a.channel}</td>
-                    <td className="py-1.5 text-right font-medium">{fmtInt(a.ytd)}</td>
-                    <td className="py-1.5 text-right font-semibold" style={{ color: a.growth >= 0 ? theme.good : theme.bad }}>
-                      {a.growth >= 0 ? '+' : ''}
-                      {fmtPct(a.growth, 0)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
 
         <div className="grid gap-3 lg:grid-cols-2">
@@ -520,69 +612,37 @@ export function DemoExecutiveSummary() {
       {/* SKU Performance */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">SKU Performance</h2>
-        <ChartCard title="Total">
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={skuPerformance} layout="vertical" margin={{ left: 24 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2a2f38" />
-              <XAxis type="number" stroke={theme.textMuted} style={{ fontSize: '11px' }} />
-              <YAxis dataKey="name" type="category" stroke={theme.textMuted} style={{ fontSize: '11px' }} width={140} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtInt(v)} />
-              <Bar dataKey="total" fill={theme.accent} radius={[0, 8, 8, 0]} isAnimationActive={false}>
-                <LabelList dataKey="total" position="right" formatter={(v: number) => fmtInt(v)} style={{ fill: theme.text, fontSize: 11, fontWeight: 600 }} />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
-
-        <ChartCard title="By Channel">
-          <ResponsiveContainer width="100%" height={340}>
-            <BarChart data={skuPerformance} layout="vertical" margin={{ left: 24 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2a2f38" />
-              <XAxis type="number" stroke={theme.textMuted} style={{ fontSize: '11px' }} />
-              <YAxis dataKey="name" type="category" stroke={theme.textMuted} style={{ fontSize: '11px' }} width={140} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtInt(v)} />
-              <Legend wrapperStyle={{ fontSize: '11px' }} />
-              {byChannel.map((c) => (
-                <Bar
-                  key={c.channel}
-                  dataKey={(d: (typeof skuPerformance)[number]) => round(d.byChannel[c.channel] ?? 0)}
-                  name={c.channel}
-                  stackId="ch"
-                  fill={CHANNEL_COLOR[c.channel]}
-                  isAnimationActive={false}
-                />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      </section>
-
-      {/* Weighted Rating for Distro */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Weighted Rating for Distro</h2>
         <div className="card p-4 space-y-3">
-          <div className="flex items-baseline justify-between">
-            <div className="text-sm font-semibold">Overall (volume-weighted)</div>
-            <div className="text-2xl font-bold" style={{ color: theme.warn }}>
-              {totals.rating.toFixed(1)}
-              <span className="text-sm text-muted"> / 100</span>
-            </div>
-          </div>
-          <div className="space-y-2">
-            {byDistributor.map((s) => (
-              <div key={s.key} className="space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="inline-flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
-                    {s.label}
-                  </span>
-                  <span className="font-medium">{s.rating}</span>
+          <div className="text-sm font-semibold">Total</div>
+          <div className="space-y-2.5">
+            {skuPerformance.map((row) => {
+              const maxTotal = skuPerformance[0]?.total || 1
+              const pct = Math.max(0, Math.min(100, (row.total / maxTotal) * 100))
+              return (
+                <div key={row.name} className="flex items-center gap-3">
+                  <div
+                    className="relative rounded overflow-hidden border bg-black shrink-0"
+                    style={{
+                      width: 32,
+                      aspectRatio: hasSkuCanArt(row.name) ? skuCanAspect(row.name) : '180 / 551',
+                      borderColor: theme.border,
+                      containerType: 'inline-size',
+                    }}
+                  >
+                    {hasSkuCanArt(row.name) && <SkuCanImage flavor={row.name} dimmed={false} />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="truncate">{row.name}</span>
+                      <span className="font-semibold ml-2">{fmtInt(row.total)}</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: theme.accent }} />
+                    </div>
+                  </div>
                 </div>
-                <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
-                  <div className="h-full rounded-full" style={{ width: `${s.rating}%`, backgroundColor: s.color }} />
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </section>
@@ -611,34 +671,6 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
     <div className="card p-4">
       <div className="text-sm font-semibold mb-3">{title}</div>
       {children}
-    </div>
-  )
-}
-
-function ShareBar({
-  leftPct,
-  leftColor,
-  rightColor,
-  leftLabel,
-  rightLabel,
-}: {
-  leftPct: number
-  leftColor: string
-  rightColor: string
-  leftLabel: string
-  rightLabel: string
-}) {
-  const pct = Math.max(0, Math.min(1, leftPct)) * 100
-  return (
-    <div className="space-y-1.5">
-      <div className="flex h-2.5 rounded-full overflow-hidden">
-        <div style={{ width: `${pct}%`, backgroundColor: leftColor }} />
-        <div style={{ width: `${100 - pct}%`, backgroundColor: rightColor }} />
-      </div>
-      <div className="flex justify-between text-[11px] text-muted">
-        <span>{leftLabel}</span>
-        <span>{rightLabel}</span>
-      </div>
     </div>
   )
 }
