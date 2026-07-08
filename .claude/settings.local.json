@@ -48,7 +48,8 @@
       "Bash(git commit -m 'Redesign Forecast section: giant trending-actual number, simplified monthly chart *)",
       "Bash(git commit -m 'Move Drivers & Drags under Key Accounts; expand to top 10 accounts *)",
       "Bash(git commit -m ' *)",
-      "Bash(git commit -m 'Remove Volume by Channel and Distribution by Channel boxes *)"
+      "Bash(git commit -m 'Remove Volume by Channel and Distribution by Channel boxes *)",
+      "Bash(grep -n \"Category Review Pipeline\\\\|</div>$\" src/pages/AccountManagement.tsx)"
     ]
   }
 }
