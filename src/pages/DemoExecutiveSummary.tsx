@@ -64,6 +64,10 @@ const KEY_ACCOUNTS = [
   { name: 'BrightAisle Wholesale', channel: 'Wholesale' as Channel, ytd: 7_200, growth: 0.09 },
   { name: 'Trailhead Specialty Foods', channel: 'Small Format' as Channel, ytd: 6_500, growth: 0.11 },
   { name: 'PeakStream Marketplace', channel: 'Digital' as Channel, ytd: 5_900, growth: 0.38 },
+  { name: 'Coastal Fresh Markets', channel: 'Natural' as Channel, ytd: 4_800, growth: 0.22 },
+  { name: 'Redwood Wholesale Club', channel: 'Wholesale' as Channel, ytd: 4_200, growth: -0.08 },
+  { name: 'Union Square Grocers', channel: 'Large Format' as Channel, ytd: 3_900, growth: 0.05 },
+  { name: 'Ivy League Co-op', channel: 'Small Format' as Channel, ytd: 3_400, growth: -0.15 },
 ]
 
 const SKUS = [
@@ -194,13 +198,11 @@ export function DemoExecutiveSummary() {
   }, [active, totals.ytd])
 
   const driversAndDrags = useMemo(() => {
-    const withGrowth = active
-      .map((s) => ({ ...s, growth: s.py > 0 ? s.ytd / s.py - 1 : 0 }))
-      .sort((a, b) => b.growth - a.growth)
-    const drivers = withGrowth.slice(0, 3)
-    const drags = [...withGrowth].sort((a, b) => a.growth - b.growth).slice(0, 3)
+    const sorted = [...KEY_ACCOUNTS].sort((a, b) => b.growth - a.growth)
+    const drivers = sorted.slice(0, 3)
+    const drags = [...sorted].sort((a, b) => a.growth - b.growth).slice(0, 3)
     return { drivers, drags }
-  }, [active])
+  }, [])
 
   const skuPerformance = useMemo(() => {
     const channels = byChannel.map((c) => c.channel)
@@ -437,7 +439,7 @@ export function DemoExecutiveSummary() {
         </div>
       </section>
 
-      {/* Chain vs Indy / Key Accounts */}
+      {/* Chain vs Indy / Key Accounts / Drivers & Drags */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Accounts</h2>
         <div className="grid gap-3 lg:grid-cols-2">
@@ -451,7 +453,7 @@ export function DemoExecutiveSummary() {
           </div>
 
           <div className="card p-4 space-y-3">
-            <div className="text-sm font-semibold">Key Accounts</div>
+            <div className="text-sm font-semibold">Key Accounts (Top 10)</div>
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-muted">
@@ -477,46 +479,40 @@ export function DemoExecutiveSummary() {
             </table>
           </div>
         </div>
-      </section>
 
-      {/* Drivers & Drags */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Drivers &amp; Drags</h2>
         <div className="grid gap-3 lg:grid-cols-2">
           <div className="card p-4 space-y-2">
             <div className="text-sm font-semibold" style={{ color: theme.good }}>
               ▲ Top Drivers
             </div>
-            {driversAndDrags.drivers.map((s) => (
-              <div key={s.key} className="flex items-center justify-between text-sm">
+            {driversAndDrags.drivers.map((a) => (
+              <div key={a.name} className="flex items-center justify-between text-sm">
                 <span className="inline-flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
-                  {s.label}
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CHANNEL_COLOR[a.channel] }} />
+                  {a.name}
                 </span>
                 <span className="font-semibold" style={{ color: theme.good }}>
-                  +{fmtPct(s.growth, 0)}
+                  +{fmtPct(a.growth, 0)}
                 </span>
               </div>
             ))}
-            {driversAndDrags.drivers.length === 0 && <div className="text-xs text-muted">No sources enabled.</div>}
           </div>
           <div className="card p-4 space-y-2">
             <div className="text-sm font-semibold" style={{ color: theme.bad }}>
               ▼ Top Drags
             </div>
-            {driversAndDrags.drags.map((s) => (
-              <div key={s.key} className="flex items-center justify-between text-sm">
+            {driversAndDrags.drags.map((a) => (
+              <div key={a.name} className="flex items-center justify-between text-sm">
                 <span className="inline-flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
-                  {s.label}
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: CHANNEL_COLOR[a.channel] }} />
+                  {a.name}
                 </span>
-                <span className="font-semibold" style={{ color: s.growth >= 0 ? theme.textMuted : theme.bad }}>
-                  {s.growth >= 0 ? '+' : ''}
-                  {fmtPct(s.growth, 0)}
+                <span className="font-semibold" style={{ color: a.growth >= 0 ? theme.textMuted : theme.bad }}>
+                  {a.growth >= 0 ? '+' : ''}
+                  {fmtPct(a.growth, 0)}
                 </span>
               </div>
             ))}
-            {driversAndDrags.drags.length === 0 && <div className="text-xs text-muted">No sources enabled.</div>}
           </div>
         </div>
       </section>

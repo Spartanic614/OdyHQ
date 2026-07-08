@@ -45,7 +45,8 @@
       "mcp__visualize__show_widget",
       "Bash(git commit -m 'Add Demo - Executive Summary concept page *)",
       "Bash(grep -n \"<Bar$\\\\|<Bar\\\\b\" src/pages/DemoExecutiveSummary.tsx)",
-      "Bash(git commit -m 'Redesign Forecast section: giant trending-actual number, simplified monthly chart *)"
+      "Bash(git commit -m 'Redesign Forecast section: giant trending-actual number, simplified monthly chart *)",
+      "Bash(git commit -m 'Move Drivers & Drags under Key Accounts; expand to top 10 accounts *)"
     ]
   }
 }
