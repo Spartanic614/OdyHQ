@@ -40,7 +40,10 @@
       "Bash(git commit -m 'Remove Status Distribution pie chart from Executive Summary *)",
       "Bash(git commit -m 'Add data labels above bars in Executive Summary charts *)",
       "Bash(git commit -m 'Match Distribution heatmap column order to Battlecards SKU flow *)",
-      "Bash(git commit -m 'Make Margin Calculator use full page width *)"
+      "Bash(git commit -m 'Make Margin Calculator use full page width *)",
+      "mcp__visualize__read_me",
+      "mcp__visualize__show_widget",
+      "Bash(git commit -m 'Add Demo - Executive Summary concept page *)"
     ]
   }
 }

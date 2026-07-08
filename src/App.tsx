@@ -4,6 +4,7 @@ import { DataProvider } from './data/store'
 import { Shell } from './components/Shell'
 import { Login } from './pages/Login'
 import { ExecutiveSummary } from './pages/ExecutiveSummary'
+import { DemoExecutiveSummary } from './pages/DemoExecutiveSummary'
 import { AccountManagement } from './pages/AccountManagement'
 import { Battlecards } from './pages/Battlecards'
 import { Portfolio } from './pages/Portfolio'
@@ -40,6 +41,7 @@ export default function App() {
         <Route element={<Shell />}>
           <Route index element={<Navigate to="/executive-summary" replace />} />
           <Route path="executive-summary" element={<ExecutiveSummary />} />
+          <Route path="demo-executive-summary" element={<DemoExecutiveSummary />} />
           <Route path="accounts" element={<AccountManagement />} />
           <Route path="battlecards" element={<Battlecards />} />
           <Route path="portfolio" element={<Portfolio />} />
