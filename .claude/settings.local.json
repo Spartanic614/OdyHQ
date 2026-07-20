@@ -58,7 +58,8 @@
       "Bash(git commit -m 'Add forecast mode toggle: per-SKU build-up or manual case total *)",
       "Bash(git commit -m 'Stretch Slotting Fees can row to fill the card width *)",
       "Bash(git commit -m 'Select-all on focus for Trade Spend fields; remove number spinners *)",
-      "Bash(git commit -m 'Slotting fees now multiply by outlet count: cost/SKU/store x SKUs x outlets *)"
+      "Bash(git commit -m 'Slotting fees now multiply by outlet count: cost/SKU/store x SKUs x outlets *)",
+      "Bash(git commit -m 'Rename One-time & fixed spend to Fixed Spends, add second field *)"
     ]
   }
 }

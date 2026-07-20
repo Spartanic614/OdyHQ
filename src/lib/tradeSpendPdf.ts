@@ -182,7 +182,8 @@ export async function buildTradeSpendDoc(
     y += 17
   }
 
-  row('One-time marketing', inputs.oneTimeMarketing)
+  row('Fixed Spend 1', inputs.fixedSpend1)
+  row('Fixed Spend 2', inputs.fixedSpend2)
   row(
     'Slotting fees',
     r.slottingTotal,

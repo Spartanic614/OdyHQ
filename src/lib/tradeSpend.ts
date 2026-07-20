@@ -25,7 +25,8 @@ export interface TradeSpendInputs {
   outlets: number // number of outlets this deal covers
   slottingFeePerSku: number // $ slotting fee charged per SKU per store
   slottingSkus: string[] // flavors this slotting fee applies to
-  oneTimeMarketing: number
+  fixedSpend1: number
+  fixedSpend2: number
 }
 
 export const DEFAULT_TRADE_INPUTS: TradeSpendInputs = {
@@ -39,7 +40,8 @@ export const DEFAULT_TRADE_INPUTS: TradeSpendInputs = {
   outlets: 0,
   slottingFeePerSku: 0,
   slottingSkus: [],
-  oneTimeMarketing: 0,
+  fixedSpend1: 0,
+  fixedSpend2: 0,
 }
 
 export type Verdict = 'Profitable' | 'Breakeven' | 'In the Red'
@@ -98,7 +100,7 @@ export function calcTradeSpend(input: TradeSpendInputs): TradeSpendResult {
 
   const slottingTotal = (input.slottingFeePerSku || 0) * input.slottingSkus.length * (input.outlets || 0)
 
-  const oneTimeTotal = input.oneTimeMarketing + slottingTotal
+  const oneTimeTotal = input.fixedSpend1 + input.fixedSpend2 + slottingTotal
 
   const totalTradeSpend = oneTimeTotal
   const grossProfit = sales - cogs
@@ -108,7 +110,8 @@ export function calcTradeSpend(input: TradeSpendInputs): TradeSpendResult {
   const spendPerOutlet = input.outlets > 0 ? totalTradeSpend / input.outlets : 0
 
   const lineItems: LineItem[] = [
-    { key: 'marketing', label: 'One-time marketing', amount: input.oneTimeMarketing },
+    { key: 'fixed1', label: 'Fixed Spend 1', amount: input.fixedSpend1 },
+    { key: 'fixed2', label: 'Fixed Spend 2', amount: input.fixedSpend2 },
     {
       key: 'slotting',
       label: 'Slotting fees',

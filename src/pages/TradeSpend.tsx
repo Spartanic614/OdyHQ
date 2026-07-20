@@ -28,7 +28,7 @@ const VERDICT_STYLE: Record<Verdict, { color: string; icon: string; blurb: strin
 
 export function TradeSpend() {
   const [inputs, setInputs] = useLocalStorage<TradeSpendInputs>(
-    'trade_spend_inputs_v7',
+    'trade_spend_inputs_v8',
     DEFAULT_TRADE_INPUTS,
   )
   const r = useMemo(() => calcTradeSpend(inputs), [inputs])
@@ -243,8 +243,9 @@ export function TradeSpend() {
           </section>
 
           <section className="card p-3 space-y-3">
-            <div className="text-sm font-semibold">One-time & fixed spend</div>
-            <Money label="One-time marketing spend" value={inputs.oneTimeMarketing} onChange={setNum('oneTimeMarketing')} />
+            <div className="text-sm font-semibold">Fixed Spends</div>
+            <Money label="Fixed Spend 1" value={inputs.fixedSpend1} onChange={setNum('fixedSpend1')} />
+            <Money label="Fixed Spend 2" value={inputs.fixedSpend2} onChange={setNum('fixedSpend2')} />
           </section>
         </div>
 
