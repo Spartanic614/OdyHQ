@@ -54,7 +54,8 @@
       "Bash(git commit -m 'Add units/store/week stat and light-blue input styling to Trade Spend *)",
       "Bash(git commit -m 'Add retailer name field to Trade Spend, shown prominently on PDF export *)",
       "Bash(git commit -m 'Show actual can art in Slotting Fees SKU picker, colorized when selected *)",
-      "Bash(git commit -m 'Shrink Slotting Fees SKU picker to compact 30px can thumbnails *)"
+      "Bash(git commit -m 'Shrink Slotting Fees SKU picker to compact 30px can thumbnails *)",
+      "Bash(git commit -m 'Add forecast mode toggle: per-SKU build-up or manual case total *)"
     ]
   }
 }

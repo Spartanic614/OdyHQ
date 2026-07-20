@@ -27,7 +27,7 @@ const VERDICT_STYLE: Record<Verdict, { color: string; icon: string; blurb: strin
 
 export function TradeSpend() {
   const [inputs, setInputs] = useLocalStorage<TradeSpendInputs>(
-    'trade_spend_inputs_v6',
+    'trade_spend_inputs_v7',
     DEFAULT_TRADE_INPUTS,
   )
   const r = useMemo(() => calcTradeSpend(inputs), [inputs])
@@ -111,39 +111,71 @@ export function TradeSpend() {
         {/* ---------- Inputs ---------- */}
         <div className="space-y-4">
           <section className="card p-3 space-y-3">
-            <div className="text-sm font-semibold">Forecasting</div>
-            <div className="text-xs text-muted">Units per store per week, by SKU</div>
-            <div className="space-y-1.5">
-              {PORTFOLIO_SKUS.map((s, i) => {
-                const upw = inputs.skuForecast[s.flavor] || 0
-                const cases = skuAnnualCases(upw, inputs.outlets)
-                return (
-                  <div key={s.flavor} className="flex items-center justify-between gap-2 text-sm">
-                    <span className="text-muted text-xs truncate">{i + 1}. {s.flavor}</span>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <input
-                        type="number"
-                        min={0}
-                        step={0.1}
-                        className={`input w-16 text-right ${FIELD_INPUT}`}
-                        value={upw}
-                        onChange={(e) => setSkuForecast(s.flavor)(e.target.value)}
-                      />
-                      <span className="text-[10px] text-muted w-16 text-right">
-                        {inputs.outlets > 0 ? `${fmtInt(cases)} cs` : '—'}
-                      </span>
-                    </div>
-                  </div>
-                )
-              })}
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-sm font-semibold">Forecasting</div>
+              <div className="flex rounded overflow-hidden border border-ink-500">
+                <button
+                  className={`px-2 py-1 text-[11px] ${
+                    inputs.forecastMode === 'sku' ? 'bg-accent text-white' : 'text-muted hover:text-text'
+                  }`}
+                  onClick={() => setInputs((p) => ({ ...p, forecastMode: 'sku' }))}
+                >
+                  By SKU
+                </button>
+                <button
+                  className={`px-2 py-1 text-[11px] ${
+                    inputs.forecastMode === 'manual' ? 'bg-accent text-white' : 'text-muted hover:text-text'
+                  }`}
+                  onClick={() => setInputs((p) => ({ ...p, forecastMode: 'manual' }))}
+                >
+                  Manual total
+                </button>
+              </div>
             </div>
+
+            {inputs.forecastMode === 'sku' ? (
+              <>
+                <div className="text-xs text-muted">Units per store per week, by SKU</div>
+                <div className="space-y-1.5">
+                  {PORTFOLIO_SKUS.map((s, i) => {
+                    const upw = inputs.skuForecast[s.flavor] || 0
+                    const cases = skuAnnualCases(upw, inputs.outlets)
+                    return (
+                      <div key={s.flavor} className="flex items-center justify-between gap-2 text-sm">
+                        <span className="text-muted text-xs truncate">{i + 1}. {s.flavor}</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <input
+                            type="number"
+                            min={0}
+                            step={0.1}
+                            className={`input w-16 text-right ${FIELD_INPUT}`}
+                            value={upw}
+                            onChange={(e) => setSkuForecast(s.flavor)(e.target.value)}
+                          />
+                          <span className="text-[10px] text-muted w-16 text-right">
+                            {inputs.outlets > 0 ? `${fmtInt(cases)} cs` : '—'}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                {inputs.outlets === 0 && (
+                  <div className="text-[11px] text-muted">Enter outlet count below to see the case forecast.</div>
+                )}
+              </>
+            ) : (
+              <Cases
+                label="Forecasted annual sales (12-pk cases)"
+                value={inputs.manualAnnualCases}
+                onChange={setNum('manualAnnualCases')}
+              />
+            )}
+
             <div className="flex items-center justify-between text-sm font-semibold border-t border-white/10 pt-2">
               <span>Total annual forecast</span>
               <span>{fmtInt(r.annualCases)} cases</span>
             </div>
-            {inputs.outlets === 0 && (
-              <div className="text-[11px] text-muted">Enter outlet count below to see the case forecast.</div>
-            )}
           </section>
 
           <section className="card p-3 space-y-3">

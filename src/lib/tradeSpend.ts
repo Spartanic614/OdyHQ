@@ -1,18 +1,24 @@
 // ============================================================
 // Trade spend calculator model. Pure functions.
-// Annual case volume is derived bottom-up from a per-SKU units/store/week
-// forecast × outlet count × 52 weeks, converted from units to 12-pack
-// cases. Revenue = cases × sell price/case, COGS = cases × cost/case.
+// Annual case volume comes from one of two forecast modes:
+//  - 'sku': built bottom-up from per-SKU units/store/week × outlets ×
+//    52 weeks, converted from units to 12-pack cases
+//  - 'manual': a single directly-entered total of annual 12-pack cases
+// Revenue = cases × sell price/case, COGS = cases × cost/case.
 // Slotting fees are a per-SKU cost applied across whichever SKUs are
 // selected.
 // ============================================================
 import { COGS_PER_CASE, TRADE_PROFIT_MARGIN } from '../config/methodology'
 import { UNITS_PER_CASE } from './margin'
 
+export type ForecastMode = 'sku' | 'manual'
+
 export interface TradeSpendInputs {
   dealName: string
   retailer: string // retailer/account this deal is for — shown on the PDF export
-  skuForecast: Record<string, number> // flavor -> units per store per week
+  forecastMode: ForecastMode
+  skuForecast: Record<string, number> // flavor -> units per store per week ('sku' mode)
+  manualAnnualCases: number // directly-entered annual 12-pack cases ('manual' mode)
   pricePerCase: number // $ sell price per case (revenue per case)
   cogsPerCase: number // $ cost of goods per 12-pack case
   outlets: number // number of outlets this deal covers
@@ -24,7 +30,9 @@ export interface TradeSpendInputs {
 export const DEFAULT_TRADE_INPUTS: TradeSpendInputs = {
   dealName: '',
   retailer: '',
+  forecastMode: 'sku',
   skuForecast: {},
+  manualAnnualCases: 0,
   pricePerCase: 0,
   cogsPerCase: COGS_PER_CASE,
   outlets: 0,
@@ -43,7 +51,7 @@ export interface LineItem {
 }
 
 export interface TradeSpendResult {
-  annualCases: number // derived: sum over SKUs of (units/store/week × outlets × 52) ÷ units/case
+  annualCases: number // 'sku' mode: sum over SKUs of (units/store/week × outlets × 52) ÷ units/case; 'manual' mode: entered directly
   sales: number // derived revenue ($) = cases × price/case
   cogs: number // derived COGS ($) = cases × cost/case
   slottingTotal: number // slotting fee/SKU × number of SKUs selected
@@ -76,10 +84,13 @@ export function skuAnnualCases(unitsPerStoreWeek: number, outlets: number): numb
 }
 
 export function calcTradeSpend(input: TradeSpendInputs): TradeSpendResult {
-  const annualCases = Object.values(input.skuForecast).reduce(
-    (sum, unitsPerWeek) => sum + skuAnnualCases(unitsPerWeek, input.outlets),
-    0,
-  )
+  const annualCases =
+    input.forecastMode === 'manual'
+      ? input.manualAnnualCases || 0
+      : Object.values(input.skuForecast).reduce(
+          (sum, unitsPerWeek) => sum + skuAnnualCases(unitsPerWeek, input.outlets),
+          0,
+        )
 
   const sales = annualCases * (input.pricePerCase || 0)
   const cogs = annualCases * (input.cogsPerCase || 0)
