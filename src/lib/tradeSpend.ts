@@ -17,6 +17,7 @@ export type BrokerUnit = 'usd' | 'pct'
 
 export interface TradeSpendInputs {
   dealName: string
+  retailer: string // retailer/account this deal is for — shown on the PDF export
   annualCases: number // forecasted annual volume in 12-pack cases
   pricePerCase: number // $ sell price per case (revenue per case)
   cogsPerCase: number // $ cost of goods per 12-pack case
@@ -37,6 +38,7 @@ export const emptyPromo = (): PromoAllowance => ({ ratePct: 0, months: [] })
 
 export const DEFAULT_TRADE_INPUTS: TradeSpendInputs = {
   dealName: '',
+  retailer: '',
   annualCases: 0,
   pricePerCase: 0,
   cogsPerCase: COGS_PER_CASE,

@@ -51,7 +51,8 @@
       "Bash(git commit -m 'Remove Volume by Channel and Distribution by Channel boxes *)",
       "Bash(grep -n \"Category Review Pipeline\\\\|</div>$\" src/pages/AccountManagement.tsx)",
       "Bash(git commit -m 'Add outlet count and auto-generated spend-per-outlet to Trade Spend Calculator *)",
-      "Bash(git commit -m 'Add units/store/week stat and light-blue input styling to Trade Spend *)"
+      "Bash(git commit -m 'Add units/store/week stat and light-blue input styling to Trade Spend *)",
+      "Bash(git commit -m 'Add retailer name field to Trade Spend, shown prominently on PDF export *)"
     ]
   }
 }

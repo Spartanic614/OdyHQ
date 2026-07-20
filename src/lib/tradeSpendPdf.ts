@@ -65,10 +65,18 @@ export async function buildTradeSpendDoc(
   doc.setTextColor(...GRAPHITE)
   doc.text('Trade Spend Summary', M, y)
 
+  if (inputs.retailer.trim()) {
+    y += 20
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(14)
+    doc.setTextColor(...GRAPHITE)
+    doc.text(inputs.retailer.trim(), M, y)
+  }
+
   if (inputs.dealName.trim()) {
-    y += 18
+    y += 16
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(12)
+    doc.setFontSize(11)
     doc.setTextColor(...MUTED)
     doc.text(inputs.dealName.trim(), M, y)
   }
@@ -228,10 +236,13 @@ export async function buildTradeSpendDoc(
 
 export async function exportTradeSpendPdf(inputs: TradeSpendInputs) {
   const doc = await buildTradeSpendDoc(inputs)
-  const slug =
-    (inputs.dealName.trim() || 'trade-spend')
+  const slugify = (s: string) =>
+    s
+      .trim()
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'trade-spend'
+      .replace(/^-+|-+$/g, '')
+  const slug =
+    [slugify(inputs.retailer), slugify(inputs.dealName)].filter(Boolean).join('-') || 'trade-spend'
   doc.save(`${slug}-summary.pdf`)
 }

@@ -26,7 +26,7 @@ const VERDICT_STYLE: Record<Verdict, { color: string; icon: string; blurb: strin
 
 export function TradeSpend() {
   const [inputs, setInputs] = useLocalStorage<TradeSpendInputs>(
-    'trade_spend_inputs_v2',
+    'trade_spend_inputs_v3',
     DEFAULT_TRADE_INPUTS,
   )
   const r = useMemo(() => calcTradeSpend(inputs), [inputs])
@@ -59,8 +59,16 @@ export function TradeSpend() {
         </div>
         <div className="flex items-center gap-2">
           <input
-            className={`input text-sm w-48 ${FIELD_INPUT}`}
-            placeholder="Account / deal name"
+            className={`input text-sm w-40 ${FIELD_INPUT}`}
+            placeholder="Retailer name"
+            value={inputs.retailer}
+            onChange={(e) =>
+              setInputs((p) => ({ ...p, retailer: e.target.value }))
+            }
+          />
+          <input
+            className={`input text-sm w-40 ${FIELD_INPUT}`}
+            placeholder="Deal / campaign name"
             value={inputs.dealName}
             onChange={(e) =>
               setInputs((p) => ({ ...p, dealName: e.target.value }))
