@@ -6,7 +6,6 @@
 import type { jsPDF } from 'jspdf'
 import type { TradeSpendInputs, Verdict } from './tradeSpend'
 import { calcTradeSpend } from './tradeSpend'
-import { MONTHS } from './format'
 
 const usd = (n: number) =>
   n.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
@@ -20,14 +19,6 @@ const VERDICT_RGB: Record<Verdict, [number, number, number]> = {
   Profitable: [34, 160, 110],
   Breakeven: [200, 150, 30],
   'In the Red': [210, 70, 90],
-}
-
-function monthsLabel(months: number[]): string {
-  if (!months.length) return '—'
-  if (months.length === 12) return 'All year'
-  if (months.length <= 6)
-    return `${months.length} mo · ${months.map((m) => MONTHS[m - 1]).join(', ')}`
-  return `${months.length} months`
 }
 
 export async function buildTradeSpendDoc(
@@ -191,16 +182,19 @@ export async function buildTradeSpendDoc(
     y += 17
   }
 
-  row('O/I', r.oiCost, `${inputs.oi.ratePct}% · ${monthsLabel(inputs.oi.months)}`)
-  row('MCB', r.mcbCost, `${inputs.mcb.ratePct}% · ${monthsLabel(inputs.mcb.months)}`)
-  row('TPR', r.tprCost, `${inputs.tpr.ratePct}% · ${monthsLabel(inputs.tpr.months)}`)
   row(
     'Broker fees',
     r.brokerCost,
     inputs.brokerUnit === 'pct' ? `${inputs.broker}% of sales` : 'flat',
   )
   row('One-time marketing', inputs.oneTimeMarketing)
-  row('Slotting fees', inputs.slotting)
+  row(
+    'Slotting fees',
+    r.slottingTotal,
+    inputs.slottingSkus.length > 0
+      ? `${inputs.slottingSkus.length} SKUs × ${usd(inputs.slottingFeePerSku)}`
+      : undefined,
+  )
   row('Demo / merchandising', inputs.demoMerch)
   row('Digital / retail media', inputs.digitalMedia)
   row('Other (one-time)', inputs.other)

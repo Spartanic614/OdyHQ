@@ -1,17 +1,11 @@
 // ============================================================
 // Trade spend calculator model. Pure functions.
 // Volume is entered in 12-pack cases; revenue = cases × sell price/case,
-// COGS = cases × cost/case. Promo allowances (O/I, MCB, TPR) are % of
-// revenue applied to the months selected.
+// COGS = cases × cost/case. Slotting fees are a per-SKU cost applied
+// across whichever SKUs are selected.
 // ============================================================
 import { COGS_PER_CASE, TRADE_PROFIT_MARGIN } from '../config/methodology'
 import { UNITS_PER_CASE } from './margin'
-
-// A promo allowance: a % rate that runs only in the chosen months (1–12).
-export interface PromoAllowance {
-  ratePct: number
-  months: number[]
-}
 
 export type BrokerUnit = 'usd' | 'pct'
 
@@ -22,19 +16,15 @@ export interface TradeSpendInputs {
   pricePerCase: number // $ sell price per case (revenue per case)
   cogsPerCase: number // $ cost of goods per 12-pack case
   outlets: number // number of outlets this deal covers
-  oi: PromoAllowance
-  mcb: PromoAllowance
-  tpr: PromoAllowance
+  slottingFeePerSku: number // $ slotting fee charged per SKU
+  slottingSkus: string[] // flavors this slotting fee applies to
   oneTimeMarketing: number
-  slotting: number
   demoMerch: number
   broker: number
   brokerUnit: BrokerUnit
   digitalMedia: number
   other: number
 }
-
-export const emptyPromo = (): PromoAllowance => ({ ratePct: 0, months: [] })
 
 export const DEFAULT_TRADE_INPUTS: TradeSpendInputs = {
   dealName: '',
@@ -43,11 +33,9 @@ export const DEFAULT_TRADE_INPUTS: TradeSpendInputs = {
   pricePerCase: 0,
   cogsPerCase: COGS_PER_CASE,
   outlets: 0,
-  oi: emptyPromo(),
-  mcb: emptyPromo(),
-  tpr: emptyPromo(),
+  slottingFeePerSku: 0,
+  slottingSkus: [],
   oneTimeMarketing: 0,
-  slotting: 0,
   demoMerch: 0,
   broker: 0,
   brokerUnit: 'pct',
@@ -67,11 +55,7 @@ export interface LineItem {
 export interface TradeSpendResult {
   sales: number // derived revenue ($) = cases × price/case
   cogs: number // derived COGS ($) = cases × cost/case
-  monthlySales: number
-  oiCost: number
-  mcbCost: number
-  tprCost: number
-  promoTotal: number
+  slottingTotal: number // slotting fee/SKU × number of SKUs selected
   brokerCost: number
   oneTimeTotal: number
   totalTradeSpend: number
@@ -84,9 +68,6 @@ export interface TradeSpendResult {
   lineItems: LineItem[]
   verdict: Verdict | null // null when sales = 0 (nothing to judge yet)
 }
-
-const promoCost = (p: PromoAllowance, monthlySales: number) =>
-  (p.ratePct / 100) * monthlySales * p.months.length
 
 export function classify(
   netProfit: number,
@@ -102,24 +83,20 @@ export function classify(
 export function calcTradeSpend(input: TradeSpendInputs): TradeSpendResult {
   const sales = (input.annualCases || 0) * (input.pricePerCase || 0)
   const cogs = (input.annualCases || 0) * (input.cogsPerCase || 0)
-  const monthlySales = sales / 12
-
-  const oiCost = promoCost(input.oi, monthlySales)
-  const mcbCost = promoCost(input.mcb, monthlySales)
-  const tprCost = promoCost(input.tpr, monthlySales)
-  const promoTotal = oiCost + mcbCost + tprCost
 
   const brokerCost =
     input.brokerUnit === 'pct' ? (input.broker / 100) * sales : input.broker
 
+  const slottingTotal = (input.slottingFeePerSku || 0) * input.slottingSkus.length
+
   const oneTimeTotal =
     input.oneTimeMarketing +
-    input.slotting +
+    slottingTotal +
     input.demoMerch +
     input.digitalMedia +
     input.other
 
-  const totalTradeSpend = promoTotal + brokerCost + oneTimeTotal
+  const totalTradeSpend = brokerCost + oneTimeTotal
   const grossProfit = sales - cogs
   const netProfit = grossProfit - totalTradeSpend
   const netMargin = sales > 0 ? netProfit / sales : 0
@@ -129,12 +106,14 @@ export function calcTradeSpend(input: TradeSpendInputs): TradeSpendResult {
   const unitsPerStorePerWeek = input.outlets > 0 ? annualUnits / input.outlets / 52 : 0
 
   const lineItems: LineItem[] = [
-    { key: 'oi', label: 'O/I', amount: oiCost, detail: `${input.oi.ratePct}% × ${input.oi.months.length} mo` },
-    { key: 'mcb', label: 'MCB', amount: mcbCost, detail: `${input.mcb.ratePct}% × ${input.mcb.months.length} mo` },
-    { key: 'tpr', label: 'TPR', amount: tprCost, detail: `${input.tpr.ratePct}% × ${input.tpr.months.length} mo` },
     { key: 'broker', label: 'Broker fees', amount: brokerCost, detail: input.brokerUnit === 'pct' ? `${input.broker}% of sales` : 'flat' },
     { key: 'marketing', label: 'One-time marketing', amount: input.oneTimeMarketing },
-    { key: 'slotting', label: 'Slotting fees', amount: input.slotting },
+    {
+      key: 'slotting',
+      label: 'Slotting fees',
+      amount: slottingTotal,
+      detail: input.slottingSkus.length > 0 ? `${input.slottingSkus.length} SKUs × ${input.slottingFeePerSku}` : undefined,
+    },
     { key: 'demo', label: 'Demo / merchandising', amount: input.demoMerch },
     { key: 'digital', label: 'Digital / retail media', amount: input.digitalMedia },
     { key: 'other', label: 'Other (one-time)', amount: input.other },
@@ -143,11 +122,7 @@ export function calcTradeSpend(input: TradeSpendInputs): TradeSpendResult {
   return {
     sales,
     cogs,
-    monthlySales,
-    oiCost,
-    mcbCost,
-    tprCost,
-    promoTotal,
+    slottingTotal,
     brokerCost,
     oneTimeTotal,
     totalTradeSpend,

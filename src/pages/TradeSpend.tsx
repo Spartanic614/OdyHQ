@@ -3,14 +3,14 @@ import {
   calcTradeSpend,
   DEFAULT_TRADE_INPUTS,
   type BrokerUnit,
-  type PromoAllowance,
   type TradeSpendInputs,
   type Verdict,
 } from '../lib/tradeSpend'
 import { exportTradeSpendPdf } from '../lib/tradeSpendPdf'
 import { useLocalStorage } from '../lib/useLocalStorage'
 import { TRADE_PROFIT_MARGIN } from '../config/methodology'
-import { fmtUsd, fmtPct, fmtInt, MONTHS } from '../lib/format'
+import { PORTFOLIO_SKUS } from '../config/skuPortfolio'
+import { fmtUsd, fmtPct, fmtInt } from '../lib/format'
 import { theme } from '../theme'
 
 // Light-blue field styling — scoped to this page only, so inputs pop
@@ -26,7 +26,7 @@ const VERDICT_STYLE: Record<Verdict, { color: string; icon: string; blurb: strin
 
 export function TradeSpend() {
   const [inputs, setInputs] = useLocalStorage<TradeSpendInputs>(
-    'trade_spend_inputs_v3',
+    'trade_spend_inputs_v4',
     DEFAULT_TRADE_INPUTS,
   )
   const r = useMemo(() => calcTradeSpend(inputs), [inputs])
@@ -44,8 +44,13 @@ export function TradeSpend() {
   const setNum = (k: keyof TradeSpendInputs) => (v: string) =>
     setInputs((prev) => ({ ...prev, [k]: Number(v) || 0 }))
 
-  const setPromo = (k: 'oi' | 'mcb' | 'tpr') => (p: PromoAllowance) =>
-    setInputs((prev) => ({ ...prev, [k]: p }))
+  const toggleSku = (flavor: string) =>
+    setInputs((prev) => ({
+      ...prev,
+      slottingSkus: prev.slottingSkus.includes(flavor)
+        ? prev.slottingSkus.filter((f) => f !== flavor)
+        : [...prev.slottingSkus, flavor],
+    }))
 
   return (
     <div className="space-y-4">
@@ -53,7 +58,7 @@ export function TradeSpend() {
         <div>
           <h1 className="text-xl font-semibold">Trade Spend Calculator</h1>
           <p className="text-sm text-muted">
-            Model a deal's promotional and one-time spend against forecasted
+            Model a deal's slotting fees and one-time spend against forecasted
             sales to gauge directional profitability.
           </p>
         </div>
@@ -121,20 +126,53 @@ export function TradeSpend() {
             </div>
           </section>
 
-          <section className="card p-3 space-y-4">
-            <div className="text-sm font-semibold">
-              Promotional allowances
-              <span className="text-muted font-normal"> (% of sales in selected months)</span>
+          <section className="card p-3 space-y-3">
+            <div className="text-sm font-semibold">Slotting fees</div>
+            <Money label="Cost per SKU" value={inputs.slottingFeePerSku} onChange={setNum('slottingFeePerSku')} />
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-muted">SKUs included</span>
+                <button
+                  className="text-[10px] text-accent hover:underline px-1"
+                  onClick={() =>
+                    setInputs((p) => ({
+                      ...p,
+                      slottingSkus: p.slottingSkus.length === PORTFOLIO_SKUS.length
+                        ? []
+                        : PORTFOLIO_SKUS.map((s) => s.flavor),
+                    }))
+                  }
+                >
+                  {inputs.slottingSkus.length === PORTFOLIO_SKUS.length ? 'Clear' : 'All'}
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                {PORTFOLIO_SKUS.map((s, i) => {
+                  const on = inputs.slottingSkus.includes(s.flavor)
+                  return (
+                    <button
+                      key={s.flavor}
+                      onClick={() => toggleSku(s.flavor)}
+                      className={`text-[10px] leading-tight text-left px-1.5 py-1 rounded border ${
+                        on ? 'bg-accent border-accent text-white' : 'border-ink-500 text-muted hover:text-text'
+                      }`}
+                    >
+                      {i + 1}. {s.flavor}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
-            <PromoRow label="O/I (Off-Invoice)" promo={inputs.oi} onChange={setPromo('oi')} />
-            <PromoRow label="MCB (Bill-back)" promo={inputs.mcb} onChange={setPromo('mcb')} />
-            <PromoRow label="TPR (Temp Price Reduction)" promo={inputs.tpr} onChange={setPromo('tpr')} />
+            <div className="text-xs text-muted border-t border-white/10 pt-2">
+              = <span className="text-text">{fmtUsd(r.slottingTotal)}</span> total ·{' '}
+              {inputs.slottingSkus.length} SKU{inputs.slottingSkus.length === 1 ? '' : 's'} ×{' '}
+              {fmtUsd(inputs.slottingFeePerSku)}
+            </div>
           </section>
 
           <section className="card p-3 space-y-3">
             <div className="text-sm font-semibold">One-time & fixed spend</div>
             <Money label="One-time marketing spend" value={inputs.oneTimeMarketing} onChange={setNum('oneTimeMarketing')} />
-            <Money label="Slotting fees" value={inputs.slotting} onChange={setNum('slotting')} />
             <Money label="Demo / merchandising spend" value={inputs.demoMerch} onChange={setNum('demoMerch')} />
             <BrokerRow
               value={inputs.broker}
@@ -356,68 +394,6 @@ function Cases({
         onChange={(e) => onChange(e.target.value)}
       />
     </label>
-  )
-}
-
-function PromoRow({
-  label,
-  promo,
-  onChange,
-}: {
-  label: string
-  promo: PromoAllowance
-  onChange: (p: PromoAllowance) => void
-}) {
-  const toggleMonth = (m: number) => {
-    const has = promo.months.includes(m)
-    onChange({
-      ...promo,
-      months: has ? promo.months.filter((x) => x !== m) : [...promo.months, m].sort((a, b) => a - b),
-    })
-  }
-  const allOn = promo.months.length === 12
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-sm text-muted">{label}</span>
-        <div className="flex items-center">
-          <input
-            type="number"
-            min={0}
-            step={0.5}
-            className={`input w-20 text-right ${FIELD_INPUT}`}
-            value={promo.ratePct}
-            onChange={(e) => onChange({ ...promo, ratePct: Number(e.target.value) || 0 })}
-          />
-          <span className={`px-2 py-1.5 border border-l-0 rounded-r-md ${FIELD_ADORNMENT}`}>%</span>
-        </div>
-      </div>
-      <div className="flex items-center gap-1">
-        <div className="flex flex-wrap gap-1 flex-1">
-          {MONTHS.map((mn, i) => {
-            const m = i + 1
-            const on = promo.months.includes(m)
-            return (
-              <button
-                key={m}
-                onClick={() => toggleMonth(m)}
-                className={`text-[10px] w-7 py-0.5 rounded border ${
-                  on ? 'bg-accent border-accent text-white' : 'border-ink-500 text-muted hover:text-text'
-                }`}
-              >
-                {mn}
-              </button>
-            )
-          })}
-        </div>
-        <button
-          className="text-[10px] text-accent hover:underline px-1"
-          onClick={() => onChange({ ...promo, months: allOn ? [] : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] })}
-        >
-          {allOn ? 'Clear' : 'All'}
-        </button>
-      </div>
-    </div>
   )
 }
 
