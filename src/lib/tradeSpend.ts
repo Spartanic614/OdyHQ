@@ -19,6 +19,7 @@ export interface TradeSpendInputs {
   annualCases: number // forecasted annual volume in 12-pack cases
   pricePerCase: number // $ sell price per case (revenue per case)
   cogsPerCase: number // $ cost of goods per 12-pack case
+  outlets: number // number of outlets this deal covers
   oi: PromoAllowance
   mcb: PromoAllowance
   tpr: PromoAllowance
@@ -38,6 +39,7 @@ export const DEFAULT_TRADE_INPUTS: TradeSpendInputs = {
   annualCases: 0,
   pricePerCase: 0,
   cogsPerCase: COGS_PER_CASE,
+  outlets: 0,
   oi: emptyPromo(),
   mcb: emptyPromo(),
   tpr: emptyPromo(),
@@ -74,6 +76,7 @@ export interface TradeSpendResult {
   netProfit: number
   netMargin: number // net profit ÷ sales (0 when sales = 0)
   tradeSpendRate: number // trade spend ÷ sales
+  spendPerOutlet: number // total trade spend ÷ outlets (0 when outlets = 0)
   lineItems: LineItem[]
   verdict: Verdict | null // null when sales = 0 (nothing to judge yet)
 }
@@ -117,6 +120,7 @@ export function calcTradeSpend(input: TradeSpendInputs): TradeSpendResult {
   const netProfit = grossProfit - totalTradeSpend
   const netMargin = sales > 0 ? netProfit / sales : 0
   const tradeSpendRate = sales > 0 ? totalTradeSpend / sales : 0
+  const spendPerOutlet = input.outlets > 0 ? totalTradeSpend / input.outlets : 0
 
   const lineItems: LineItem[] = [
     { key: 'oi', label: 'O/I', amount: oiCost, detail: `${input.oi.ratePct}% × ${input.oi.months.length} mo` },
@@ -145,6 +149,7 @@ export function calcTradeSpend(input: TradeSpendInputs): TradeSpendResult {
     netProfit,
     netMargin,
     tradeSpendRate,
+    spendPerOutlet,
     lineItems,
     verdict: classify(netProfit, netMargin, sales > 0),
   }

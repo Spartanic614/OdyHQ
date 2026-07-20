@@ -94,6 +94,7 @@ export function TradeSpend() {
             />
             <Money label="Sell price / case" value={inputs.pricePerCase} onChange={setNum('pricePerCase')} />
             <Money label="COGS / case (12-pack)" value={inputs.cogsPerCase} onChange={setNum('cogsPerCase')} />
+            <Cases label="Number of outlets" value={inputs.outlets} onChange={setNum('outlets')} />
             <div className="text-xs text-muted border-t border-white/10 pt-2">
               = <span className="text-text">{fmtUsd(r.sales)}</span> revenue ·{' '}
               <span className="text-text">{fmtUsd(r.cogs)}</span> COGS ·{' '}
@@ -149,6 +150,11 @@ export function TradeSpend() {
               label="Total trade spend"
               value={fmtUsd(r.totalTradeSpend)}
               sub={r.sales > 0 ? `${fmtPct(r.tradeSpendRate, 1)} of sales` : undefined}
+            />
+            <Stat
+              label="Spend per outlet"
+              value={inputs.outlets > 0 ? fmtUsd(r.spendPerOutlet) : '—'}
+              sub={inputs.outlets > 0 ? `${fmtUsd(r.totalTradeSpend)} ÷ ${fmtInt(inputs.outlets)} outlets` : 'Enter outlet count above'}
             />
             <div className="border-t border-ink-700 my-1" />
             <Stat
