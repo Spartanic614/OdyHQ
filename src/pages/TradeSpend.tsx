@@ -13,6 +13,11 @@ import { TRADE_PROFIT_MARGIN } from '../config/methodology'
 import { fmtUsd, fmtPct, fmtInt, MONTHS } from '../lib/format'
 import { theme } from '../theme'
 
+// Light-blue field styling — scoped to this page only, so inputs pop
+// against the dark card backgrounds instead of blending in.
+const FIELD_INPUT = 'bg-sky-100 text-slate-900 border-sky-300 placeholder:text-slate-400'
+const FIELD_ADORNMENT = 'bg-sky-100 border-sky-300 text-slate-600'
+
 const VERDICT_STYLE: Record<Verdict, { color: string; icon: string; blurb: string }> = {
   Profitable: { color: theme.good, icon: '✓', blurb: 'Net margin clears the healthy threshold after all trade spend.' },
   Breakeven: { color: theme.warn, icon: '≈', blurb: 'Positive but thin — net margin is below the healthy threshold.' },
@@ -54,7 +59,7 @@ export function TradeSpend() {
         </div>
         <div className="flex items-center gap-2">
           <input
-            className="input text-sm w-48"
+            className={`input text-sm w-48 ${FIELD_INPUT}`}
             placeholder="Account / deal name"
             value={inputs.dealName}
             onChange={(e) =>
@@ -99,6 +104,12 @@ export function TradeSpend() {
               = <span className="text-text">{fmtUsd(r.sales)}</span> revenue ·{' '}
               <span className="text-text">{fmtUsd(r.cogs)}</span> COGS ·{' '}
               <span className="text-text">{fmtUsd(r.grossProfit)}</span> gross profit
+            </div>
+            <div className="flex items-center justify-between text-sm border-t border-white/10 pt-2">
+              <span className="text-muted">Units / store / week</span>
+              <span className="font-semibold">
+                {inputs.outlets > 0 ? r.unitsPerStorePerWeek.toFixed(1) : '—'}
+              </span>
             </div>
           </section>
 
@@ -301,12 +312,12 @@ function Money({
     <label className="flex items-center justify-between gap-3 text-sm">
       <span className="text-muted">{label}</span>
       <div className="flex items-center">
-        <span className="px-2 py-1.5 bg-ink-900 border border-r-0 border-ink-500 rounded-l-md text-muted">$</span>
+        <span className={`px-2 py-1.5 border border-r-0 rounded-l-md ${FIELD_ADORNMENT}`}>$</span>
         <input
           type="number"
           min={0}
           step={100}
-          className="input rounded-l-none w-40 text-right"
+          className={`input rounded-l-none w-40 text-right ${FIELD_INPUT}`}
           value={value}
           onChange={(e) => onChange(e.target.value)}
         />
@@ -332,7 +343,7 @@ function Cases({
         type="number"
         min={0}
         step={1}
-        className="input w-40 text-right"
+        className={`input w-40 text-right ${FIELD_INPUT}`}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
@@ -366,11 +377,11 @@ function PromoRow({
             type="number"
             min={0}
             step={0.5}
-            className="input w-20 text-right"
+            className={`input w-20 text-right ${FIELD_INPUT}`}
             value={promo.ratePct}
             onChange={(e) => onChange({ ...promo, ratePct: Number(e.target.value) || 0 })}
           />
-          <span className="px-2 py-1.5 bg-ink-900 border border-l-0 border-ink-500 rounded-r-md text-muted">%</span>
+          <span className={`px-2 py-1.5 border border-l-0 rounded-r-md ${FIELD_ADORNMENT}`}>%</span>
         </div>
       </div>
       <div className="flex items-center gap-1">
@@ -421,18 +432,18 @@ function BrokerRow({
       </span>
       <div className="flex items-center">
         {unit === 'usd' && (
-          <span className="px-2 py-1.5 bg-ink-900 border border-r-0 border-ink-500 rounded-l-md text-muted">$</span>
+          <span className={`px-2 py-1.5 border border-r-0 rounded-l-md ${FIELD_ADORNMENT}`}>$</span>
         )}
         <input
           type="number"
           min={0}
           step={unit === 'pct' ? 0.5 : 100}
-          className={`input w-28 text-right ${unit === 'usd' ? 'rounded-l-none' : 'rounded-r-none'}`}
+          className={`input w-28 text-right ${unit === 'usd' ? 'rounded-l-none' : 'rounded-r-none'} ${FIELD_INPUT}`}
           value={value}
           onChange={(e) => onValue(e.target.value)}
         />
         <select
-          className="input rounded-l-none py-1.5"
+          className={`input rounded-l-none py-1.5 ${FIELD_INPUT}`}
           value={unit}
           onChange={(e) => onUnit(e.target.value as BrokerUnit)}
         >

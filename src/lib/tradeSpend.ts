@@ -5,6 +5,7 @@
 // revenue applied to the months selected.
 // ============================================================
 import { COGS_PER_CASE, TRADE_PROFIT_MARGIN } from '../config/methodology'
+import { UNITS_PER_CASE } from './margin'
 
 // A promo allowance: a % rate that runs only in the chosen months (1–12).
 export interface PromoAllowance {
@@ -77,6 +78,7 @@ export interface TradeSpendResult {
   netMargin: number // net profit ÷ sales (0 when sales = 0)
   tradeSpendRate: number // trade spend ÷ sales
   spendPerOutlet: number // total trade spend ÷ outlets (0 when outlets = 0)
+  unitsPerStorePerWeek: number // annual units (cases × units/case) ÷ outlets ÷ 52 (0 when outlets = 0)
   lineItems: LineItem[]
   verdict: Verdict | null // null when sales = 0 (nothing to judge yet)
 }
@@ -121,6 +123,8 @@ export function calcTradeSpend(input: TradeSpendInputs): TradeSpendResult {
   const netMargin = sales > 0 ? netProfit / sales : 0
   const tradeSpendRate = sales > 0 ? totalTradeSpend / sales : 0
   const spendPerOutlet = input.outlets > 0 ? totalTradeSpend / input.outlets : 0
+  const annualUnits = (input.annualCases || 0) * UNITS_PER_CASE
+  const unitsPerStorePerWeek = input.outlets > 0 ? annualUnits / input.outlets / 52 : 0
 
   const lineItems: LineItem[] = [
     { key: 'oi', label: 'O/I', amount: oiCost, detail: `${input.oi.ratePct}% × ${input.oi.months.length} mo` },
@@ -150,6 +154,7 @@ export function calcTradeSpend(input: TradeSpendInputs): TradeSpendResult {
     netMargin,
     tradeSpendRate,
     spendPerOutlet,
+    unitsPerStorePerWeek,
     lineItems,
     verdict: classify(netProfit, netMargin, sales > 0),
   }
