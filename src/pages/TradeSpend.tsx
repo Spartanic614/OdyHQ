@@ -190,7 +190,7 @@ export function TradeSpend() {
 
           <section className="card p-3 space-y-3">
             <div className="text-sm font-semibold">Slotting fees</div>
-            <Money label="Cost per SKU" value={inputs.slottingFeePerSku} onChange={setNum('slottingFeePerSku')} />
+            <Money label="Cost per SKU per store" value={inputs.slottingFeePerSku} onChange={setNum('slottingFeePerSku')} />
             <div className="space-y-1.5">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm text-muted">SKUs included</span>
@@ -234,8 +234,12 @@ export function TradeSpend() {
             <div className="text-xs text-muted border-t border-white/10 pt-2">
               = <span className="text-text">{fmtUsd(r.slottingTotal)}</span> total ·{' '}
               {inputs.slottingSkus.length} SKU{inputs.slottingSkus.length === 1 ? '' : 's'} ×{' '}
+              {fmtInt(inputs.outlets)} outlet{inputs.outlets === 1 ? '' : 's'} ×{' '}
               {fmtUsd(inputs.slottingFeePerSku)}
             </div>
+            {inputs.outlets === 0 && (
+              <div className="text-[11px] text-muted">Enter outlet count below to calculate the total.</div>
+            )}
           </section>
 
           <section className="card p-3 space-y-3">

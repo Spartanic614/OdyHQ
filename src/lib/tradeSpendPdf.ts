@@ -186,8 +186,8 @@ export async function buildTradeSpendDoc(
   row(
     'Slotting fees',
     r.slottingTotal,
-    inputs.slottingSkus.length > 0
-      ? `${inputs.slottingSkus.length} SKUs × ${usd(inputs.slottingFeePerSku)}`
+    inputs.slottingSkus.length > 0 && inputs.outlets > 0
+      ? `${inputs.slottingSkus.length} SKUs × ${inputs.outlets} outlets × ${usd(inputs.slottingFeePerSku)}`
       : undefined,
   )
 

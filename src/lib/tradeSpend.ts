@@ -5,8 +5,9 @@
 //    52 weeks, converted from units to 12-pack cases
 //  - 'manual': a single directly-entered total of annual 12-pack cases
 // Revenue = cases × sell price/case, COGS = cases × cost/case.
-// Slotting fees are a per-SKU cost applied across whichever SKUs are
-// selected.
+// Slotting fees are a per-SKU-per-store cost: $/SKU/store × SKUs
+// selected × outlets — reflecting how retailers actually invoice
+// slotting (per door, per item).
 // ============================================================
 import { COGS_PER_CASE, TRADE_PROFIT_MARGIN } from '../config/methodology'
 import { UNITS_PER_CASE } from './margin'
@@ -22,7 +23,7 @@ export interface TradeSpendInputs {
   pricePerCase: number // $ sell price per case (revenue per case)
   cogsPerCase: number // $ cost of goods per 12-pack case
   outlets: number // number of outlets this deal covers
-  slottingFeePerSku: number // $ slotting fee charged per SKU
+  slottingFeePerSku: number // $ slotting fee charged per SKU per store
   slottingSkus: string[] // flavors this slotting fee applies to
   oneTimeMarketing: number
 }
@@ -54,7 +55,7 @@ export interface TradeSpendResult {
   annualCases: number // 'sku' mode: sum over SKUs of (units/store/week × outlets × 52) ÷ units/case; 'manual' mode: entered directly
   sales: number // derived revenue ($) = cases × price/case
   cogs: number // derived COGS ($) = cases × cost/case
-  slottingTotal: number // slotting fee/SKU × number of SKUs selected
+  slottingTotal: number // slotting fee/SKU/store × SKUs selected × outlets
   oneTimeTotal: number
   totalTradeSpend: number
   grossProfit: number
@@ -95,7 +96,7 @@ export function calcTradeSpend(input: TradeSpendInputs): TradeSpendResult {
   const sales = annualCases * (input.pricePerCase || 0)
   const cogs = annualCases * (input.cogsPerCase || 0)
 
-  const slottingTotal = (input.slottingFeePerSku || 0) * input.slottingSkus.length
+  const slottingTotal = (input.slottingFeePerSku || 0) * input.slottingSkus.length * (input.outlets || 0)
 
   const oneTimeTotal = input.oneTimeMarketing + slottingTotal
 
@@ -112,7 +113,10 @@ export function calcTradeSpend(input: TradeSpendInputs): TradeSpendResult {
       key: 'slotting',
       label: 'Slotting fees',
       amount: slottingTotal,
-      detail: input.slottingSkus.length > 0 ? `${input.slottingSkus.length} SKUs × ${input.slottingFeePerSku}` : undefined,
+      detail:
+        input.slottingSkus.length > 0 && input.outlets > 0
+          ? `${input.slottingSkus.length} SKUs × ${input.outlets} outlets × $${input.slottingFeePerSku}`
+          : undefined,
     },
   ]
 
