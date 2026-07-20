@@ -210,7 +210,8 @@ export function TradeSpend() {
                   {inputs.slottingSkus.length === PORTFOLIO_SKUS.length ? 'Clear' : 'All'}
                 </button>
               </div>
-              <div className="flex flex-wrap gap-1.5">
+              {/* One row, cans share the card's full width evenly. */}
+              <div className="flex gap-1.5">
                 {PORTFOLIO_SKUS.map((s) => {
                   const on = inputs.slottingSkus.includes(s.flavor)
                   return (
@@ -218,9 +219,8 @@ export function TradeSpend() {
                       key={s.flavor}
                       onClick={() => toggleSku(s.flavor)}
                       title={`${s.flavor} — ${on ? 'included' : 'excluded'}`}
-                      className="relative rounded overflow-hidden border bg-black shrink-0"
+                      className="relative rounded overflow-hidden border bg-black flex-1 basis-0 min-w-0"
                       style={{
-                        width: 30,
                         aspectRatio: skuCanAspect(s.flavor),
                         borderColor: on ? theme.accent : theme.border,
                         boxShadow: on ? `0 0 0 1px ${theme.accent}66` : undefined,
