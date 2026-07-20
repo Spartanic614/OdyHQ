@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import {
   calcTradeSpend,
   DEFAULT_TRADE_INPUTS,
-  type BrokerUnit,
   type TradeSpendInputs,
   type Verdict,
 } from '../lib/tradeSpend'
@@ -26,7 +25,7 @@ const VERDICT_STYLE: Record<Verdict, { color: string; icon: string; blurb: strin
 
 export function TradeSpend() {
   const [inputs, setInputs] = useLocalStorage<TradeSpendInputs>(
-    'trade_spend_inputs_v4',
+    'trade_spend_inputs_v5',
     DEFAULT_TRADE_INPUTS,
   )
   const r = useMemo(() => calcTradeSpend(inputs), [inputs])
@@ -173,15 +172,6 @@ export function TradeSpend() {
           <section className="card p-3 space-y-3">
             <div className="text-sm font-semibold">One-time & fixed spend</div>
             <Money label="One-time marketing spend" value={inputs.oneTimeMarketing} onChange={setNum('oneTimeMarketing')} />
-            <Money label="Demo / merchandising spend" value={inputs.demoMerch} onChange={setNum('demoMerch')} />
-            <BrokerRow
-              value={inputs.broker}
-              unit={inputs.brokerUnit}
-              onValue={setNum('broker')}
-              onUnit={(u) => setInputs((p) => ({ ...p, brokerUnit: u }))}
-            />
-            <Money label="Digital / retail media spend" value={inputs.digitalMedia} onChange={setNum('digitalMedia')} />
-            <Money label="Other general bucket (one-time)" value={inputs.other} onChange={setNum('other')} />
           </section>
         </div>
 
@@ -393,48 +383,6 @@ function Cases({
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
-    </label>
-  )
-}
-
-function BrokerRow({
-  value,
-  unit,
-  onValue,
-  onUnit,
-}: {
-  value: number
-  unit: BrokerUnit
-  onValue: (v: string) => void
-  onUnit: (u: BrokerUnit) => void
-}) {
-  return (
-    <label className="flex items-center justify-between gap-3 text-sm">
-      <span className="text-muted">
-        Broker fees
-        <span className="text-[10px] text-warn"> · basis TBD</span>
-      </span>
-      <div className="flex items-center">
-        {unit === 'usd' && (
-          <span className={`px-2 py-1.5 border border-r-0 rounded-l-md ${FIELD_ADORNMENT}`}>$</span>
-        )}
-        <input
-          type="number"
-          min={0}
-          step={unit === 'pct' ? 0.5 : 100}
-          className={`input w-28 text-right ${unit === 'usd' ? 'rounded-l-none' : 'rounded-r-none'} ${FIELD_INPUT}`}
-          value={value}
-          onChange={(e) => onValue(e.target.value)}
-        />
-        <select
-          className={`input rounded-l-none py-1.5 ${FIELD_INPUT}`}
-          value={unit}
-          onChange={(e) => onUnit(e.target.value as BrokerUnit)}
-        >
-          <option value="pct">% of sales</option>
-          <option value="usd">$ flat</option>
-        </select>
-      </div>
     </label>
   )
 }

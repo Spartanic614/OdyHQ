@@ -182,11 +182,6 @@ export async function buildTradeSpendDoc(
     y += 17
   }
 
-  row(
-    'Broker fees',
-    r.brokerCost,
-    inputs.brokerUnit === 'pct' ? `${inputs.broker}% of sales` : 'flat',
-  )
   row('One-time marketing', inputs.oneTimeMarketing)
   row(
     'Slotting fees',
@@ -195,9 +190,6 @@ export async function buildTradeSpendDoc(
       ? `${inputs.slottingSkus.length} SKUs × ${usd(inputs.slottingFeePerSku)}`
       : undefined,
   )
-  row('Demo / merchandising', inputs.demoMerch)
-  row('Digital / retail media', inputs.digitalMedia)
-  row('Other (one-time)', inputs.other)
 
   y += 2
   doc.setDrawColor(...LINE)

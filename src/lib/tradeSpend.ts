@@ -7,8 +7,6 @@
 import { COGS_PER_CASE, TRADE_PROFIT_MARGIN } from '../config/methodology'
 import { UNITS_PER_CASE } from './margin'
 
-export type BrokerUnit = 'usd' | 'pct'
-
 export interface TradeSpendInputs {
   dealName: string
   retailer: string // retailer/account this deal is for — shown on the PDF export
@@ -19,11 +17,6 @@ export interface TradeSpendInputs {
   slottingFeePerSku: number // $ slotting fee charged per SKU
   slottingSkus: string[] // flavors this slotting fee applies to
   oneTimeMarketing: number
-  demoMerch: number
-  broker: number
-  brokerUnit: BrokerUnit
-  digitalMedia: number
-  other: number
 }
 
 export const DEFAULT_TRADE_INPUTS: TradeSpendInputs = {
@@ -36,11 +29,6 @@ export const DEFAULT_TRADE_INPUTS: TradeSpendInputs = {
   slottingFeePerSku: 0,
   slottingSkus: [],
   oneTimeMarketing: 0,
-  demoMerch: 0,
-  broker: 0,
-  brokerUnit: 'pct',
-  digitalMedia: 0,
-  other: 0,
 }
 
 export type Verdict = 'Profitable' | 'Breakeven' | 'In the Red'
@@ -56,7 +44,6 @@ export interface TradeSpendResult {
   sales: number // derived revenue ($) = cases × price/case
   cogs: number // derived COGS ($) = cases × cost/case
   slottingTotal: number // slotting fee/SKU × number of SKUs selected
-  brokerCost: number
   oneTimeTotal: number
   totalTradeSpend: number
   grossProfit: number
@@ -84,19 +71,11 @@ export function calcTradeSpend(input: TradeSpendInputs): TradeSpendResult {
   const sales = (input.annualCases || 0) * (input.pricePerCase || 0)
   const cogs = (input.annualCases || 0) * (input.cogsPerCase || 0)
 
-  const brokerCost =
-    input.brokerUnit === 'pct' ? (input.broker / 100) * sales : input.broker
-
   const slottingTotal = (input.slottingFeePerSku || 0) * input.slottingSkus.length
 
-  const oneTimeTotal =
-    input.oneTimeMarketing +
-    slottingTotal +
-    input.demoMerch +
-    input.digitalMedia +
-    input.other
+  const oneTimeTotal = input.oneTimeMarketing + slottingTotal
 
-  const totalTradeSpend = brokerCost + oneTimeTotal
+  const totalTradeSpend = oneTimeTotal
   const grossProfit = sales - cogs
   const netProfit = grossProfit - totalTradeSpend
   const netMargin = sales > 0 ? netProfit / sales : 0
@@ -106,7 +85,6 @@ export function calcTradeSpend(input: TradeSpendInputs): TradeSpendResult {
   const unitsPerStorePerWeek = input.outlets > 0 ? annualUnits / input.outlets / 52 : 0
 
   const lineItems: LineItem[] = [
-    { key: 'broker', label: 'Broker fees', amount: brokerCost, detail: input.brokerUnit === 'pct' ? `${input.broker}% of sales` : 'flat' },
     { key: 'marketing', label: 'One-time marketing', amount: input.oneTimeMarketing },
     {
       key: 'slotting',
@@ -114,16 +92,12 @@ export function calcTradeSpend(input: TradeSpendInputs): TradeSpendResult {
       amount: slottingTotal,
       detail: input.slottingSkus.length > 0 ? `${input.slottingSkus.length} SKUs × ${input.slottingFeePerSku}` : undefined,
     },
-    { key: 'demo', label: 'Demo / merchandising', amount: input.demoMerch },
-    { key: 'digital', label: 'Digital / retail media', amount: input.digitalMedia },
-    { key: 'other', label: 'Other (one-time)', amount: input.other },
   ]
 
   return {
     sales,
     cogs,
     slottingTotal,
-    brokerCost,
     oneTimeTotal,
     totalTradeSpend,
     grossProfit,
