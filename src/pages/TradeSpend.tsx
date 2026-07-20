@@ -15,8 +15,9 @@ import { fmtUsd, fmtPct, fmtInt } from '../lib/format'
 import { theme } from '../theme'
 
 // Light-blue field styling — scoped to this page only, so inputs pop
-// against the dark card backgrounds instead of blending in.
-const FIELD_INPUT = 'bg-sky-100 text-slate-900 border-sky-300 placeholder:text-slate-400'
+// against the dark card backgrounds instead of blending in. no-spinner
+// hides the number arrows: all values here are keyed in manually.
+const FIELD_INPUT = 'no-spinner bg-sky-100 text-slate-900 border-sky-300 placeholder:text-slate-400'
 const FIELD_ADORNMENT = 'bg-sky-100 border-sky-300 text-slate-600'
 
 const VERDICT_STYLE: Record<Verdict, { color: string; icon: string; blurb: string }> = {
@@ -144,13 +145,10 @@ export function TradeSpend() {
                       <div key={s.flavor} className="flex items-center justify-between gap-2 text-sm">
                         <span className="text-muted text-xs truncate">{i + 1}. {s.flavor}</span>
                         <div className="flex items-center gap-2 shrink-0">
-                          <input
-                            type="number"
-                            min={0}
-                            step={0.1}
+                          <NumInput
                             className={`input w-16 text-right ${FIELD_INPUT}`}
                             value={upw}
-                            onChange={(e) => setSkuForecast(s.flavor)(e.target.value)}
+                            onChange={setSkuForecast(s.flavor)}
                           />
                           <span className="text-[10px] text-muted w-16 text-right">
                             {inputs.outlets > 0 ? `${fmtInt(cases)} cs` : '—'}
@@ -406,6 +404,44 @@ function DollarBar({
 }
 
 // ---------------- Input controls ----------------
+// Numeric field rendered as type="text" (inputMode decimal): text inputs
+// support select-on-focus (number inputs don't in Chrome) and have no
+// spinner arrows — every value here is keyed in manually. A local draft
+// string holds in-progress typing (e.g. a trailing ".") and snaps back
+// to the canonical numeric value on blur.
+function NumInput({
+  value,
+  onChange,
+  className,
+}: {
+  value: number
+  onChange: (v: string) => void
+  className: string
+}) {
+  const [draft, setDraft] = useState<string | null>(null)
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      className={className}
+      value={draft ?? String(value)}
+      onFocus={(e) => {
+        setDraft(String(value))
+        // Defer past the click's mouseup, which would otherwise collapse
+        // the selection and drop the caret at the click position.
+        const el = e.currentTarget
+        setTimeout(() => el.select(), 0)
+      }}
+      onBlur={() => setDraft(null)}
+      onChange={(e) => {
+        const raw = e.target.value.replace(/[^0-9.]/g, '')
+        setDraft(raw)
+        onChange(raw)
+      }}
+    />
+  )
+}
+
 function Money({
   label,
   value,
@@ -420,13 +456,10 @@ function Money({
       <span className="text-muted">{label}</span>
       <div className="flex items-center">
         <span className={`px-2 py-1.5 border border-r-0 rounded-l-md ${FIELD_ADORNMENT}`}>$</span>
-        <input
-          type="number"
-          min={0}
-          step={100}
+        <NumInput
           className={`input rounded-l-none w-40 text-right ${FIELD_INPUT}`}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={onChange}
         />
       </div>
     </label>
@@ -446,14 +479,7 @@ function Cases({
   return (
     <label className="flex items-center justify-between gap-3 text-sm">
       <span className="text-muted">{label}</span>
-      <input
-        type="number"
-        min={0}
-        step={1}
-        className={`input w-40 text-right ${FIELD_INPUT}`}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
+      <NumInput className={`input w-40 text-right ${FIELD_INPUT}`} value={value} onChange={onChange} />
     </label>
   )
 }

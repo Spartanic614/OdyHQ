@@ -138,6 +138,18 @@ body {
     color: #6b7280;
   }
 
+  /* Number fields meant for manual keying — hide the browser's
+     increment/decrement spinner arrows. */
+  .no-spinner::-webkit-outer-spin-button,
+  .no-spinner::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .no-spinner {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+
   .th {
     text-align: left;
     font-size: 0.68rem;
