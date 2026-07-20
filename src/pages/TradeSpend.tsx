@@ -178,29 +178,24 @@ export function TradeSpend() {
                   {inputs.slottingSkus.length === PORTFOLIO_SKUS.length ? 'Clear' : 'All'}
                 </button>
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                {PORTFOLIO_SKUS.map((s, i) => {
+              <div className="flex flex-wrap gap-1.5">
+                {PORTFOLIO_SKUS.map((s) => {
                   const on = inputs.slottingSkus.includes(s.flavor)
                   return (
                     <button
                       key={s.flavor}
                       onClick={() => toggleSku(s.flavor)}
-                      className="flex flex-col items-center gap-1"
+                      title={`${s.flavor} — ${on ? 'included' : 'excluded'}`}
+                      className="relative rounded overflow-hidden border bg-black shrink-0"
+                      style={{
+                        width: 30,
+                        aspectRatio: skuCanAspect(s.flavor),
+                        borderColor: on ? theme.accent : theme.border,
+                        boxShadow: on ? `0 0 0 1px ${theme.accent}66` : undefined,
+                        containerType: 'inline-size',
+                      }}
                     >
-                      <div
-                        className="relative w-full rounded overflow-hidden border bg-black"
-                        style={{
-                          aspectRatio: skuCanAspect(s.flavor),
-                          borderColor: on ? theme.accent : theme.border,
-                          boxShadow: on ? `0 0 0 1px ${theme.accent}66` : undefined,
-                          containerType: 'inline-size',
-                        }}
-                      >
-                        <SkuCanImage flavor={s.flavor} dimmed={!on} />
-                      </div>
-                      <span className={`text-[9px] leading-tight text-center ${on ? 'text-text' : 'text-muted'}`}>
-                        {i + 1}. {s.flavor}
-                      </span>
+                      <SkuCanImage flavor={s.flavor} dimmed={!on} />
                     </button>
                   )
                 })}
