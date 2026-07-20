@@ -10,6 +10,7 @@ import { exportTradeSpendPdf } from '../lib/tradeSpendPdf'
 import { useLocalStorage } from '../lib/useLocalStorage'
 import { TRADE_PROFIT_MARGIN } from '../config/methodology'
 import { PORTFOLIO_SKUS } from '../config/skuPortfolio'
+import { SkuCanImage, skuCanAspect } from '../components/SkuCan'
 import { fmtUsd, fmtPct, fmtInt } from '../lib/format'
 import { theme } from '../theme'
 
@@ -177,18 +178,29 @@ export function TradeSpend() {
                   {inputs.slottingSkus.length === PORTFOLIO_SKUS.length ? 'Clear' : 'All'}
                 </button>
               </div>
-              <div className="grid grid-cols-3 gap-1.5">
+              <div className="grid grid-cols-3 gap-2">
                 {PORTFOLIO_SKUS.map((s, i) => {
                   const on = inputs.slottingSkus.includes(s.flavor)
                   return (
                     <button
                       key={s.flavor}
                       onClick={() => toggleSku(s.flavor)}
-                      className={`text-[10px] leading-tight text-left px-1.5 py-1 rounded border ${
-                        on ? 'bg-accent border-accent text-white' : 'border-ink-500 text-muted hover:text-text'
-                      }`}
+                      className="flex flex-col items-center gap-1"
                     >
-                      {i + 1}. {s.flavor}
+                      <div
+                        className="relative w-full rounded overflow-hidden border bg-black"
+                        style={{
+                          aspectRatio: skuCanAspect(s.flavor),
+                          borderColor: on ? theme.accent : theme.border,
+                          boxShadow: on ? `0 0 0 1px ${theme.accent}66` : undefined,
+                          containerType: 'inline-size',
+                        }}
+                      >
+                        <SkuCanImage flavor={s.flavor} dimmed={!on} />
+                      </div>
+                      <span className={`text-[9px] leading-tight text-center ${on ? 'text-text' : 'text-muted'}`}>
+                        {i + 1}. {s.flavor}
+                      </span>
                     </button>
                   )
                 })}
