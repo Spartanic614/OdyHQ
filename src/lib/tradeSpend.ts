@@ -1,8 +1,10 @@
 // ============================================================
 // Trade spend calculator model. Pure functions.
-// Volume is entered in 12-pack cases; revenue = cases × sell price/case,
-// COGS = cases × cost/case. Slotting fees are a per-SKU cost applied
-// across whichever SKUs are selected.
+// Annual case volume is derived bottom-up from a per-SKU units/store/week
+// forecast × outlet count × 52 weeks, converted from units to 12-pack
+// cases. Revenue = cases × sell price/case, COGS = cases × cost/case.
+// Slotting fees are a per-SKU cost applied across whichever SKUs are
+// selected.
 // ============================================================
 import { COGS_PER_CASE, TRADE_PROFIT_MARGIN } from '../config/methodology'
 import { UNITS_PER_CASE } from './margin'
@@ -10,7 +12,7 @@ import { UNITS_PER_CASE } from './margin'
 export interface TradeSpendInputs {
   dealName: string
   retailer: string // retailer/account this deal is for — shown on the PDF export
-  annualCases: number // forecasted annual volume in 12-pack cases
+  skuForecast: Record<string, number> // flavor -> units per store per week
   pricePerCase: number // $ sell price per case (revenue per case)
   cogsPerCase: number // $ cost of goods per 12-pack case
   outlets: number // number of outlets this deal covers
@@ -22,7 +24,7 @@ export interface TradeSpendInputs {
 export const DEFAULT_TRADE_INPUTS: TradeSpendInputs = {
   dealName: '',
   retailer: '',
-  annualCases: 0,
+  skuForecast: {},
   pricePerCase: 0,
   cogsPerCase: COGS_PER_CASE,
   outlets: 0,
@@ -41,6 +43,7 @@ export interface LineItem {
 }
 
 export interface TradeSpendResult {
+  annualCases: number // derived: sum over SKUs of (units/store/week × outlets × 52) ÷ units/case
   sales: number // derived revenue ($) = cases × price/case
   cogs: number // derived COGS ($) = cases × cost/case
   slottingTotal: number // slotting fee/SKU × number of SKUs selected
@@ -51,7 +54,6 @@ export interface TradeSpendResult {
   netMargin: number // net profit ÷ sales (0 when sales = 0)
   tradeSpendRate: number // trade spend ÷ sales
   spendPerOutlet: number // total trade spend ÷ outlets (0 when outlets = 0)
-  unitsPerStorePerWeek: number // annual units (cases × units/case) ÷ outlets ÷ 52 (0 when outlets = 0)
   lineItems: LineItem[]
   verdict: Verdict | null // null when sales = 0 (nothing to judge yet)
 }
@@ -67,9 +69,20 @@ export function classify(
   return 'Profitable'
 }
 
+// Annual cases for a single SKU, given its units/store/week and the
+// deal's outlet count.
+export function skuAnnualCases(unitsPerStoreWeek: number, outlets: number): number {
+  return ((unitsPerStoreWeek || 0) * (outlets || 0) * 52) / UNITS_PER_CASE
+}
+
 export function calcTradeSpend(input: TradeSpendInputs): TradeSpendResult {
-  const sales = (input.annualCases || 0) * (input.pricePerCase || 0)
-  const cogs = (input.annualCases || 0) * (input.cogsPerCase || 0)
+  const annualCases = Object.values(input.skuForecast).reduce(
+    (sum, unitsPerWeek) => sum + skuAnnualCases(unitsPerWeek, input.outlets),
+    0,
+  )
+
+  const sales = annualCases * (input.pricePerCase || 0)
+  const cogs = annualCases * (input.cogsPerCase || 0)
 
   const slottingTotal = (input.slottingFeePerSku || 0) * input.slottingSkus.length
 
@@ -81,8 +94,6 @@ export function calcTradeSpend(input: TradeSpendInputs): TradeSpendResult {
   const netMargin = sales > 0 ? netProfit / sales : 0
   const tradeSpendRate = sales > 0 ? totalTradeSpend / sales : 0
   const spendPerOutlet = input.outlets > 0 ? totalTradeSpend / input.outlets : 0
-  const annualUnits = (input.annualCases || 0) * UNITS_PER_CASE
-  const unitsPerStorePerWeek = input.outlets > 0 ? annualUnits / input.outlets / 52 : 0
 
   const lineItems: LineItem[] = [
     { key: 'marketing', label: 'One-time marketing', amount: input.oneTimeMarketing },
@@ -95,6 +106,7 @@ export function calcTradeSpend(input: TradeSpendInputs): TradeSpendResult {
   ]
 
   return {
+    annualCases,
     sales,
     cogs,
     slottingTotal,
@@ -105,7 +117,6 @@ export function calcTradeSpend(input: TradeSpendInputs): TradeSpendResult {
     netMargin,
     tradeSpendRate,
     spendPerOutlet,
-    unitsPerStorePerWeek,
     lineItems,
     verdict: classify(netProfit, netMargin, sales > 0),
   }

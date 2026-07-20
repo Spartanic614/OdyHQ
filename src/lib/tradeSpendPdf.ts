@@ -124,14 +124,14 @@ export async function buildTradeSpendDoc(
   stat(
     'Forecasted annual sales',
     usd(r.sales),
-    inputs.annualCases > 0
-      ? `${inputs.annualCases.toLocaleString('en-US')} cases × ${usd(inputs.pricePerCase)}/case`
+    r.annualCases > 0
+      ? `${Math.round(r.annualCases).toLocaleString('en-US')} cases × ${usd(inputs.pricePerCase)}/case`
       : undefined,
   )
   stat(
     'Odyssey COGS',
     usd(r.cogs),
-    inputs.annualCases > 0 ? `${usd(inputs.cogsPerCase)}/case` : undefined,
+    r.annualCases > 0 ? `${usd(inputs.cogsPerCase)}/case` : undefined,
   )
   stat('Gross profit', usd(r.grossProfit))
   stat(

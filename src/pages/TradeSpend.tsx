@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import {
   calcTradeSpend,
   DEFAULT_TRADE_INPUTS,
+  skuAnnualCases,
   type TradeSpendInputs,
   type Verdict,
 } from '../lib/tradeSpend'
@@ -25,7 +26,7 @@ const VERDICT_STYLE: Record<Verdict, { color: string; icon: string; blurb: strin
 
 export function TradeSpend() {
   const [inputs, setInputs] = useLocalStorage<TradeSpendInputs>(
-    'trade_spend_inputs_v5',
+    'trade_spend_inputs_v6',
     DEFAULT_TRADE_INPUTS,
   )
   const r = useMemo(() => calcTradeSpend(inputs), [inputs])
@@ -49,6 +50,12 @@ export function TradeSpend() {
       slottingSkus: prev.slottingSkus.includes(flavor)
         ? prev.slottingSkus.filter((f) => f !== flavor)
         : [...prev.slottingSkus, flavor],
+    }))
+
+  const setSkuForecast = (flavor: string) => (v: string) =>
+    setInputs((prev) => ({
+      ...prev,
+      skuForecast: { ...prev.skuForecast, [flavor]: Number(v) || 0 },
     }))
 
   return (
@@ -103,12 +110,43 @@ export function TradeSpend() {
         {/* ---------- Inputs ---------- */}
         <div className="space-y-4">
           <section className="card p-3 space-y-3">
+            <div className="text-sm font-semibold">Forecasting</div>
+            <div className="text-xs text-muted">Units per store per week, by SKU</div>
+            <div className="space-y-1.5">
+              {PORTFOLIO_SKUS.map((s, i) => {
+                const upw = inputs.skuForecast[s.flavor] || 0
+                const cases = skuAnnualCases(upw, inputs.outlets)
+                return (
+                  <div key={s.flavor} className="flex items-center justify-between gap-2 text-sm">
+                    <span className="text-muted text-xs truncate">{i + 1}. {s.flavor}</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.1}
+                        className={`input w-16 text-right ${FIELD_INPUT}`}
+                        value={upw}
+                        onChange={(e) => setSkuForecast(s.flavor)(e.target.value)}
+                      />
+                      <span className="text-[10px] text-muted w-16 text-right">
+                        {inputs.outlets > 0 ? `${fmtInt(cases)} cs` : '—'}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="flex items-center justify-between text-sm font-semibold border-t border-white/10 pt-2">
+              <span>Total annual forecast</span>
+              <span>{fmtInt(r.annualCases)} cases</span>
+            </div>
+            {inputs.outlets === 0 && (
+              <div className="text-[11px] text-muted">Enter outlet count below to see the case forecast.</div>
+            )}
+          </section>
+
+          <section className="card p-3 space-y-3">
             <div className="text-sm font-semibold">Volume & economics</div>
-            <Cases
-              label="Forecasted annual sales (12-pk cases)"
-              value={inputs.annualCases}
-              onChange={setNum('annualCases')}
-            />
             <Money label="Sell price / case" value={inputs.pricePerCase} onChange={setNum('pricePerCase')} />
             <Money label="COGS / case (12-pack)" value={inputs.cogsPerCase} onChange={setNum('cogsPerCase')} />
             <Cases label="Number of outlets" value={inputs.outlets} onChange={setNum('outlets')} />
@@ -116,12 +154,6 @@ export function TradeSpend() {
               = <span className="text-text">{fmtUsd(r.sales)}</span> revenue ·{' '}
               <span className="text-text">{fmtUsd(r.cogs)}</span> COGS ·{' '}
               <span className="text-text">{fmtUsd(r.grossProfit)}</span> gross profit
-            </div>
-            <div className="flex items-center justify-between text-sm border-t border-white/10 pt-2">
-              <span className="text-muted">Units / store / week</span>
-              <span className="font-semibold">
-                {inputs.outlets > 0 ? r.unitsPerStorePerWeek.toFixed(1) : '—'}
-              </span>
             </div>
           </section>
 
@@ -187,8 +219,8 @@ export function TradeSpend() {
               label="Forecasted sales"
               value={fmtUsd(r.sales)}
               sub={
-                inputs.annualCases > 0
-                  ? `${fmtInt(inputs.annualCases)} cases × ${fmtUsd(inputs.pricePerCase)}`
+                r.annualCases > 0
+                  ? `${fmtInt(r.annualCases)} cases × ${fmtUsd(inputs.pricePerCase)}`
                   : undefined
               }
             />
