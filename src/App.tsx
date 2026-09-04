@@ -14,6 +14,7 @@ import { CalendarPage } from './pages/Calendar'
 import { Inventory } from './pages/Inventory'
 import { TradeSpend } from './pages/TradeSpend'
 import { Margin } from './pages/Margin'
+import { CategoryReviewRecap } from './pages/CategoryReviewRecap'
 
 export default function App() {
   const { session, loading } = useAuth()
@@ -51,6 +52,7 @@ export default function App() {
           <Route path="inventory" element={<Inventory />} />
           <Route path="trade-spend" element={<TradeSpend />} />
           <Route path="margin" element={<Margin />} />
+          <Route path="category-review-recap" element={<CategoryReviewRecap />} />
           <Route path="*" element={<Navigate to="/demo-executive-summary" replace />} />
         </Route>
       </Routes>

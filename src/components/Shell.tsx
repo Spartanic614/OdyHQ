@@ -17,6 +17,7 @@ const DEFAULT_NAV = [
   { to: '/trade-spend', label: 'Trade Spend' },
   { to: '/margin', label: 'Margin' },
   { to: '/calendar', label: 'Calendar' },
+  { to: '/category-review-recap', label: 'Category Review Recap' },
 ]
 
 // Reorder DEFAULT_NAV per a saved list of `to` paths — unknown/removed paths
