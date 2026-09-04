@@ -17,7 +17,7 @@ export interface ChainRecord {
   broker: string
   brokerName: string
   reviewPeriod: string
-  reviewStatus: string // normalized bucket
+  reviewStatus: 'Complete' | 'Not Completed'
   reviewStatusRaw: string
   dateScheduled: string
   distributor: string
@@ -118,21 +118,13 @@ function parseUniverse(raw: string): number | null {
   return Number.isFinite(n) ? n : null
 }
 
-const STATUS_ALIASES: [RegExp, string][] = [
-  [/^complete/, 'Complete'],
-  [/^declined/, 'Declined'],
-  [/^not\s*scheduled/, 'Not Scheduled'],
-  [/^scheduled/, 'Scheduled'],
-  [/^open/, 'Open Review'],
-]
-
-function normalizeStatus(raw: string): string {
-  const s = norm(raw)
-  if (!s) return 'Not Started'
-  for (const [re, label] of STATUS_ALIASES) {
-    if (re.test(s)) return label
-  }
-  return raw.trim().replace(/\w\S*/g, (t) => t[0].toUpperCase() + t.slice(1).toLowerCase())
+// The review-status column (e.g. "column Q" in the source sheet) is only
+// meaningful when it literally says "Complete" — any other text (a stray
+// note, "Scheduled", "Declined", a typo, or nothing at all) means the
+// review has not been completed. reviewStatusRaw keeps the literal text
+// for display; reviewStatus is this strict two-value read of it.
+function normalizeStatus(raw: string): 'Complete' | 'Not Completed' {
+  return /^complete/.test(norm(raw)) ? 'Complete' : 'Not Completed'
 }
 
 function normalizeDistributor(raw: string): string {
@@ -264,9 +256,24 @@ export interface GroupBreakdown {
   name: string
   total: number
   active: number
-  scheduled: number
   complete: number
-  notScheduled: number
+}
+
+// The four core 222mg flavors — an account isn't "fully authorized" on the
+// core line unless all of these are Authorized.
+export const CORE_222_FLAVORS = ['Pineapple Mango', 'Blue Raspberry', 'Pink Lemonade', 'Strawberry Watermelon']
+
+function missingCore222(c: ChainRecord): string[] {
+  return CORE_222_FLAVORS.filter((flavor) => {
+    const key = Object.keys(c.skuAuth).find((k) => k.toLowerCase() === flavor.toLowerCase())
+    const val = key ? (c.skuAuth[key] || '').trim().toLowerCase() : ''
+    return val !== 'authorized'
+  })
+}
+
+export interface Core222Gap {
+  chain: ChainRecord
+  missing: string[]
 }
 
 export interface SkuStat {
@@ -284,6 +291,8 @@ export interface CategoryReviewSummary {
   notActiveChains: number
   totalUniverseSum: number
   activeUniverseSum: number
+  completedChains: number
+  completionRate: number
   statusCounts: StatusCount[]
   byAccountManager: GroupBreakdown[]
   byChannel: GroupBreakdown[]
@@ -292,6 +301,7 @@ export interface CategoryReviewSummary {
   upcoming: ChainRecord[]
   skuStats: SkuStat[]
   overallAuthRate: number
+  core222Gaps: Core222Gap[]
 }
 
 export function summarizeCategoryReviews(chains: ChainRecord[]): CategoryReviewSummary {
@@ -303,6 +313,9 @@ export function summarizeCategoryReviews(chains: ChainRecord[]): CategoryReviewS
     .filter((c) => c.activeStatus === 'Active')
     .reduce((s, c) => s + (c.totalUniverse || 0), 0)
 
+  const completedChains = chains.filter((c) => c.reviewStatus === 'Complete').length
+  const completionRate = totalChains > 0 ? completedChains / totalChains : 0
+
   const statusMap = new Map<string, number>()
   chains.forEach((c) => statusMap.set(c.reviewStatus, (statusMap.get(c.reviewStatus) || 0) + 1))
   const statusCounts = Array.from(statusMap.entries())
@@ -313,12 +326,10 @@ export function summarizeCategoryReviews(chains: ChainRecord[]): CategoryReviewS
     const map = new Map<string, GroupBreakdown>()
     chains.forEach((c) => {
       const name = keyFn(c) || 'Unknown'
-      const g = map.get(name) || { name, total: 0, active: 0, scheduled: 0, complete: 0, notScheduled: 0 }
+      const g = map.get(name) || { name, total: 0, active: 0, complete: 0 }
       g.total++
       if (c.activeStatus === 'Active') g.active++
-      if (c.reviewStatus === 'Scheduled') g.scheduled++
       if (c.reviewStatus === 'Complete') g.complete++
-      if (c.reviewStatus === 'Not Scheduled') g.notScheduled++
       map.set(name, g)
     })
     return Array.from(map.values()).sort((a, b) => b.total - a.total)
@@ -328,17 +339,15 @@ export function summarizeCategoryReviews(chains: ChainRecord[]): CategoryReviewS
   const byChannel = groupBy((c) => c.channel)
   const byDistributor = groupBy((c) => c.distributor)
 
+  // "Needs attention" = active, not complete, and nothing even scheduled yet.
   const needsAttention = chains
-    .filter(
-      (c) =>
-        c.activeStatus === 'Active' &&
-        (c.reviewStatus === 'Not Scheduled' || c.reviewStatus === 'Not Started' || c.reviewStatus === 'Open Review'),
-    )
+    .filter((c) => c.activeStatus === 'Active' && c.reviewStatus !== 'Complete' && !c.dateScheduled.trim())
     .sort((a, b) => (b.totalUniverse || 0) - (a.totalUniverse || 0))
     .slice(0, 15)
 
+  // "Upcoming" = has a scheduled date and isn't already complete.
   const upcoming = chains
-    .filter((c) => c.reviewStatus === 'Scheduled')
+    .filter((c) => c.dateScheduled.trim() !== '' && c.reviewStatus !== 'Complete')
     .sort((a, b) => (a.dateScheduled || '').localeCompare(b.dateScheduled || ''))
 
   const skuColumns = chains.length ? Object.keys(chains[0].skuAuth) : []
@@ -364,12 +373,20 @@ export function summarizeCategoryReviews(chains: ChainRecord[]): CategoryReviewS
   const totalAuthorized = skuStats.reduce((s, x) => s + x.authorized, 0)
   const overallAuthRate = totalDecided > 0 ? totalAuthorized / totalDecided : 0
 
+  const core222Gaps: Core222Gap[] = chains
+    .filter((c) => c.activeStatus === 'Active')
+    .map((c) => ({ chain: c, missing: missingCore222(c) }))
+    .filter((g) => g.missing.length > 0)
+    .sort((a, b) => (b.chain.totalUniverse || 0) - (a.chain.totalUniverse || 0))
+
   return {
     totalChains,
     activeChains,
     notActiveChains,
     totalUniverseSum,
     activeUniverseSum,
+    completedChains,
+    completionRate,
     statusCounts,
     byAccountManager,
     byChannel,
@@ -378,5 +395,6 @@ export function summarizeCategoryReviews(chains: ChainRecord[]): CategoryReviewS
     upcoming,
     skuStats,
     overallAuthRate,
+    core222Gaps,
   }
 }

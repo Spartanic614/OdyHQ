@@ -10,20 +10,24 @@ import {
   Cell,
   LabelList,
 } from 'recharts'
-import { parseCategoryReviewData, summarizeCategoryReviews } from '../lib/categoryReviewRecap'
+import { parseCategoryReviewData, summarizeCategoryReviews, CORE_222_FLAVORS } from '../lib/categoryReviewRecap'
 import { useLocalStorage } from '../lib/useLocalStorage'
 import { hasSkuCanArt, SkuCanImage, skuCanAspect } from '../components/SkuCan'
+import { channelGroup } from '../config/methodology'
 import { fmtInt, fmtPct } from '../lib/format'
 import { theme, chartPalette } from '../theme'
 
 const STATUS_COLOR: Record<string, string> = {
   Complete: theme.good,
-  Scheduled: theme.info,
-  'Not Scheduled': theme.warn,
-  Declined: theme.bad,
-  'Open Review': theme.accent,
-  'Not Started': theme.neutral,
+  'Not Completed': theme.warn,
 }
+
+// "Conventional" here is the same Large Format group used app-wide (see
+// channelGroup) — the button just uses the label the business calls it.
+const MOST_WANTED_CHANNELS = [
+  { label: 'Conventional', group: 'Large Format' },
+  { label: 'Natural', group: 'Natural' },
+] as const
 
 const tooltipStyle = { backgroundColor: '#13161b', border: `1px solid ${theme.border}`, fontSize: '12px' }
 
@@ -34,11 +38,37 @@ Expects columns like: Chain, Active/Not Active, Region, State, Total Universe, A
 export function CategoryReviewRecap() {
   const [raw, setRaw] = useLocalStorage<string>('category_review_recap_raw', '')
   const [editing, setEditing] = useState(!raw)
+  const [amFilter, setAmFilter] = useState('All')
+  const [mostWantedChannel, setMostWantedChannel] = useState<(typeof MOST_WANTED_CHANNELS)[number]['label']>(
+    'Conventional',
+  )
 
-  const { chains, skuColumns } = useMemo(() => parseCategoryReviewData(raw), [raw])
+  const { chains: allChains, skuColumns } = useMemo(() => parseCategoryReviewData(raw), [raw])
+
+  const accountManagers = useMemo(
+    () => Array.from(new Set(allChains.map((c) => c.accountManager))).sort(),
+    [allChains],
+  )
+
+  const chains = useMemo(
+    () => (amFilter === 'All' ? allChains : allChains.filter((c) => c.accountManager === amFilter)),
+    [allChains, amFilter],
+  )
+
   const s = useMemo(() => summarizeCategoryReviews(chains), [chains])
 
-  const hasData = chains.length > 0
+  const mostWantedGroup = MOST_WANTED_CHANNELS.find((c) => c.label === mostWantedChannel)!.group
+  const mostWanted = useMemo(
+    () =>
+      chains
+        .filter((c) => channelGroup(c.channel) === mostWantedGroup)
+        .filter((c) => c.reviewStatus !== 'Complete')
+        .sort((a, b) => (b.totalUniverse || 0) - (a.totalUniverse || 0))
+        .slice(0, 12),
+    [chains, mostWantedGroup],
+  )
+
+  const hasData = allChains.length > 0
 
   return (
     <div className="space-y-6">
@@ -79,7 +109,7 @@ export function CategoryReviewRecap() {
             onChange={(e) => setRaw(e.target.value)}
           />
           <div className="flex items-center justify-between text-xs text-muted">
-            <span>{hasData ? `Parsed ${chains.length} chains · ${skuColumns.length} SKU columns` : 'Waiting for data…'}</span>
+            <span>{hasData ? `Parsed ${allChains.length} chains · ${skuColumns.length} SKU columns` : 'Waiting for data…'}</span>
             {hasData && (
               <button className="text-accent hover:underline" onClick={() => setEditing(false)}>
                 Done editing
@@ -97,8 +127,28 @@ export function CategoryReviewRecap() {
 
       {hasData && (
         <>
+          {/* Account manager filter — applies to every section below */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-muted uppercase tracking-wider font-semibold">Account Manager</span>
+            <button
+              className={`btn text-xs ${amFilter === 'All' ? 'btn-accent' : ''}`}
+              onClick={() => setAmFilter('All')}
+            >
+              All
+            </button>
+            {accountManagers.map((am) => (
+              <button
+                key={am}
+                className={`btn text-xs ${amFilter === am ? 'btn-accent' : ''}`}
+                onClick={() => setAmFilter(am)}
+              >
+                {am}
+              </button>
+            ))}
+          </div>
+
           {/* KPI strip */}
-          <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
             <Stat label="Total Chains" value={fmtInt(s.totalChains)} detail={`${fmtInt(s.activeChains)} active`} color={theme.text} />
             <Stat
               label="Active Rate"
@@ -107,6 +157,12 @@ export function CategoryReviewRecap() {
               color={theme.good}
             />
             <Stat label="Active Universe" value={fmtInt(s.activeUniverseSum)} detail={`${fmtInt(s.totalUniverseSum)} total outlets`} color={theme.info} />
+            <Stat
+              label="Reviews Completed"
+              value={fmtPct(s.completionRate, 0)}
+              detail={`${fmtInt(s.completedChains)} of ${fmtInt(s.totalChains)} — column Q = "Complete" only`}
+              color={theme.good}
+            />
             <Stat
               label="SKU Authorization Rate"
               value={fmtPct(s.overallAuthRate, 0)}
@@ -117,7 +173,7 @@ export function CategoryReviewRecap() {
 
           {/* Review status breakdown */}
           <section className="space-y-3">
-            <h2 className="text-lg font-semibold">Category Review Status</h2>
+            <h2 className="text-lg font-semibold">Category Review Completion</h2>
             <div className="card p-4">
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={s.statusCounts}>
@@ -169,9 +225,7 @@ export function CategoryReviewRecap() {
                         <td className="py-1.5">{c.chain}</td>
                         <td className="py-1.5 text-muted">{c.accountManager}</td>
                         <td className="py-1.5 text-right font-medium">{c.totalUniverse != null ? fmtInt(c.totalUniverse) : '—'}</td>
-                        <td className="py-1.5" style={{ color: STATUS_COLOR[c.reviewStatus] ?? theme.textMuted }}>
-                          {c.reviewStatus}
-                        </td>
+                        <td className="py-1.5 text-muted">{c.reviewStatusRaw || '—'}</td>
                       </tr>
                     ))}
                     {s.needsAttention.length === 0 && (
@@ -217,6 +271,95 @@ export function CategoryReviewRecap() {
                   </tbody>
                 </table>
               </div>
+            </div>
+          </section>
+
+          {/* Most Wanted */}
+          <section className="space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h2 className="text-lg font-semibold">Most Wanted</h2>
+              <div className="flex items-center gap-1">
+                {MOST_WANTED_CHANNELS.map(({ label }) => (
+                  <button
+                    key={label}
+                    className={`btn text-xs ${mostWantedChannel === label ? 'btn-accent' : ''}`}
+                    onClick={() => setMostWantedChannel(label)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="card p-4 space-y-1">
+              <div className="text-xs text-muted mb-2">
+                Biggest {mostWantedChannel.toLowerCase()} accounts still without a completed review, by outlet count.
+              </div>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-muted">
+                    <th className="text-left font-medium pb-1.5">Chain</th>
+                    <th className="text-left font-medium pb-1.5">AM</th>
+                    <th className="text-right font-medium pb-1.5">Universe</th>
+                    <th className="text-left font-medium pb-1.5">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mostWanted.map((c) => (
+                    <tr key={c.chain} className="border-t border-white/5">
+                      <td className="py-1.5">{c.chain}</td>
+                      <td className="py-1.5 text-muted">{c.accountManager}</td>
+                      <td className="py-1.5 text-right font-medium">{c.totalUniverse != null ? fmtInt(c.totalUniverse) : '—'}</td>
+                      <td className="py-1.5 text-muted">{c.reviewStatusRaw || '—'}</td>
+                    </tr>
+                  ))}
+                  {mostWanted.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="py-3 text-center text-muted">
+                        No {mostWantedChannel.toLowerCase()} accounts pending.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {/* Full 222 authorization gaps */}
+          <section className="space-y-3">
+            <h2 className="text-lg font-semibold">Full 222 Authorization Gaps</h2>
+            <div className="card p-4 space-y-1">
+              <div className="text-xs text-muted mb-2">
+                Active accounts missing at least one core 222mg flavor ({CORE_222_FLAVORS.join(', ')}).
+              </div>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-muted">
+                    <th className="text-left font-medium pb-1.5">Chain</th>
+                    <th className="text-left font-medium pb-1.5">AM</th>
+                    <th className="text-right font-medium pb-1.5">Universe</th>
+                    <th className="text-left font-medium pb-1.5">Missing</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {s.core222Gaps.map(({ chain: c, missing }) => (
+                    <tr key={c.chain} className="border-t border-white/5">
+                      <td className="py-1.5">{c.chain}</td>
+                      <td className="py-1.5 text-muted">{c.accountManager}</td>
+                      <td className="py-1.5 text-right font-medium">{c.totalUniverse != null ? fmtInt(c.totalUniverse) : '—'}</td>
+                      <td className="py-1.5" style={{ color: theme.bad }}>
+                        {missing.join(', ')}
+                      </td>
+                    </tr>
+                  ))}
+                  {s.core222Gaps.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="py-3 text-center text-muted">
+                        Every active account has the full 222 line authorized.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </section>
 
